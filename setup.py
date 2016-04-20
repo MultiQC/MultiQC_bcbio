@@ -46,7 +46,6 @@ setup(
         'Programming Language :: JavaScript',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
-        'Topic :: Scientific/Engineering :: Visualization',
     ],
 )
 
