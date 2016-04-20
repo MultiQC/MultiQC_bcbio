@@ -24,6 +24,7 @@ setup(
     license = 'MIT',
     packages = find_packages(),
     include_package_data = True,
+    zip_safe=False,
     install_requires = [
         'multiqc',
     ],
@@ -45,7 +46,7 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: JavaScript',
         'Topic :: Scientific/Engineering',
-        'Topic :: Scientific/Engineering :: Bio-Informatics',
-    ],
+        'Topic :: Scientific/Engineering :: Bio-Informatics'
+    ]
 )
 
