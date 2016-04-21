@@ -9,6 +9,10 @@ import re
 from collections import defaultdict
 
 from multiqc import config, BaseMultiqcModule
+try:
+    from multiqc import plots
+except ImportError:
+    plots = None
 
 # Initialise the logger
 log = logging.getLogger(__name__)
@@ -27,6 +31,12 @@ INTRO_VARIANT = """
                     %of GC content (x-axis).</p>
                 """
 
+def linegraph(self, data, config):
+    if not plots:
+        return self.plot_xy_data(data, config)
+    else:
+        return plots.linegraph.plot(data, config)
+
 class MultiqcModule(BaseMultiqcModule):
 
     def __init__(self):
@@ -44,7 +54,7 @@ class MultiqcModule(BaseMultiqcModule):
         for f in self.find_log_files(config.sp['bcbio']['metrics']):
             parsed_data = self.parse_bcbio_report(f['f'])
             if parsed_data is not None:
-                s_name = self.clean_s_name(f['fn'], pattern=config.sp['bcbio']['metrics']['fn'][1:])
+                s_name = self.clean_s_name(f['fn'], root=None)
                 if s_name in self.bcbio_data:
                     log.debug("Duplicate sample name found! Overwriting: {}".format(f['s_name']))
                 self.add_data_source(f)
@@ -160,7 +170,7 @@ class MultiqcModule(BaseMultiqcModule):
         parsed_data = defaultdict(dict)
         seen = set()
         for f in self.find_log_files(names):
-            s_name = self.clean_s_name(f['fn'], pattern=names['fn'][1:])
+            s_name = self.clean_s_name(f['fn'], root=None)
             for line in f['f'].split("\n"):
                 if not line.startswith("percent"):
                     continue
@@ -203,7 +213,7 @@ class MultiqcModule(BaseMultiqcModule):
         }
 
         if bcbio_data:
-            return self.plot_xy_data(bcbio_data, config)
+            return linegraph(self, bcbio_data, config)
 
     def bcbio_coverage_avg_chart (self, names) :
         """ Make the bcbio assignment rates plot """
@@ -211,7 +221,7 @@ class MultiqcModule(BaseMultiqcModule):
         bcbio_data = list()
         parsed_data_depth = defaultdict(dict)
         for f in self.find_log_files(names):
-            s_name = self.clean_s_name(f['fn'], pattern=names['fn'][1:])
+            s_name = self.clean_s_name(f['fn'], root=None)
             for line in f['f'].split("\n"):
                 if not line.startswith("percentage"):
                     continue
@@ -230,7 +240,7 @@ class MultiqcModule(BaseMultiqcModule):
         }
 
         if bcbio_data:
-            return self.plot_xy_data(bcbio_data, config)
+            return linegraph(self, bcbio_data, config)
 
     def bcbio_variants_chart (self, names) :
         """ Make the bcbio assignment rates plot """
@@ -239,7 +249,7 @@ class MultiqcModule(BaseMultiqcModule):
         parsed_data_depth = defaultdict(dict)
         parsed_data_cg = defaultdict(dict)
         for f in self.find_log_files(names):
-            s_name = self.clean_s_name(f['fn'], pattern=names['fn'][1:])
+            s_name = self.clean_s_name(f['fn'], root=None)
             data_cg = defaultdict(float)
             for line in f['f'].split("\n"):
                 if line.startswith("pct"):
@@ -273,4 +283,4 @@ class MultiqcModule(BaseMultiqcModule):
         }
 
         if bcbio_data:
-            return self.plot_xy_data(bcbio_data, config)
+            return linegraph(self, bcbio_data, config)
