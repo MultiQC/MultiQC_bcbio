@@ -13,3 +13,5 @@ config.sp['bcbio'] = {'metrics': {'fn': '*_bcbio.txt'},
 
 if StrictVersion(multiqc.__version__.replace("dev", "")) > StrictVersion('0.5'):
     config.fn_clean_exts.append({'type': 'regex', 'pattern': '_bcbio.*'})
+else:
+    config.fn_clean_exts.extend(["_bcbio_coverage", "_bcbio_variants", "_bcbio"])

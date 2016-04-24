@@ -33,6 +33,7 @@ INTRO_VARIANT = """
 
 def linegraph(self, data, config):
     if not plots:
+        log.info("Version < 0.6")
         return self.plot_xy_data(data, config)
     else:
         return plots.linegraph.plot(data, config)
