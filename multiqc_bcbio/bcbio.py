@@ -127,6 +127,15 @@ class MultiqcModule(BaseMultiqcModule):
             'scale': 'RdYlGn',
             'format': '{:.1f}%'
         }
+        headers['Duplicates_pct'] = {
+            'title': '% Dups',
+            'description': '% of duplicated reads from samtools stats',
+            'max': 100,
+            'min': 0,
+            'modify': lambda x: x * 100,
+            'scale': 'RdYlGn',
+            'format': '{:.1f}%'
+        }
         headers['avg_coverage_per_region'] = {
             'title': 'Average coverage',
             'description': 'Average coverage per target',
@@ -176,7 +185,7 @@ class MultiqcModule(BaseMultiqcModule):
                 if not line.startswith("percent"):
                     continue
                 fields = line.split("\t")
-                x = float(fields[1])
+                x = 100 - float(fields[1])
                 y = float(fields[2])
                 if s_name not in parsed_data[fields[0]]:
                     parsed_data[fields[0]][s_name] = []
@@ -238,6 +247,8 @@ class MultiqcModule(BaseMultiqcModule):
 
         # Config for the plot
         config = {
+                'xlab': "number of reads",
+                'ylab': "pct of region covevered"
         }
 
         if bcbio_data:
@@ -277,6 +288,8 @@ class MultiqcModule(BaseMultiqcModule):
 
         # Config for the plot
         config = {
+                'ylab': 'pct of variants',
+                'xlab': 'number of reads | CG content',
                 'data_labels': [
                     {'name': 'Reads depth', 'ymax':100},
                     {'name': 'CG content', 'ymax':100, 'xmin':0, 'xmax':100}
