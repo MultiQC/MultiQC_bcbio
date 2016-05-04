@@ -112,7 +112,6 @@ class MultiqcModule(BaseMultiqcModule):
         if len(parsed_data) == 0: return None
         return parsed_data
 
-
     def metrics_stats_table(self):
         """ Take the parsed stats from the bcbio report and add them to the
         basic stats table at the top of the report """
@@ -172,7 +171,6 @@ class MultiqcModule(BaseMultiqcModule):
                     }
         self.general_stats_addcols(self.bcbio_data, headers)
 
-
     def bcbio_coverage_chart (self, names) :
         """ Make the bcbio assignment rates plot """
 
@@ -222,7 +220,7 @@ class MultiqcModule(BaseMultiqcModule):
             'ymax': 100,
         }
 
-        if bcbio_data:
+        if bcbio_data[0]:
             return linegraph(self, bcbio_data, config)
 
     def bcbio_coverage_avg_chart (self, names) :
@@ -251,7 +249,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'ylab': "pct of region covevered"
         }
 
-        if bcbio_data:
+        if bcbio_data[0]:
             return linegraph(self, bcbio_data, config)
 
     def bcbio_variants_chart (self, names) :
@@ -296,5 +294,5 @@ class MultiqcModule(BaseMultiqcModule):
                     ]
         }
 
-        if bcbio_data:
+        if bcbio_data[0]:
             return linegraph(self, bcbio_data, config)
