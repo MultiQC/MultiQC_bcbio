@@ -9,10 +9,7 @@ import re
 from collections import defaultdict
 
 from multiqc import config, BaseMultiqcModule
-try:
-    from multiqc import plots
-except ImportError:
-    plots = None
+from multiqc import plots
 
 # Initialise the logger
 log = logging.getLogger(__name__)
@@ -32,11 +29,7 @@ INTRO_VARIANT = """
                 """
 
 def linegraph(self, data, config):
-    if not plots:
-        log.info("Version < 0.6")
-        return self.plot_xy_data(data, config)
-    else:
-        return plots.linegraph.plot(data, config)
+    return plots.linegraph.plot(data, config)
 
 class MultiqcModule(BaseMultiqcModule):
 
@@ -81,6 +74,7 @@ class MultiqcModule(BaseMultiqcModule):
         coverage_plot = self.bcbio_coverage_chart(config.sp['bcbio']['coverage'])
         coverage_avg_plot = self.bcbio_coverage_avg_chart(config.sp['bcbio']['coverage_avg'])
         variant_plot = self.bcbio_variants_chart(config.sp['bcbio']['variants'])
+        qsignature_plot = self.bcbio_qsignature_chart(config.sp['bcbio']['qsignature'])
         if coverage_avg_plot:
             self.sections.append({
                 'name': 'Coverage Profile',
@@ -96,7 +90,11 @@ class MultiqcModule(BaseMultiqcModule):
                 'name': 'Variant Profile',
                 'anchor': 'bcbio-fraction-variants',
                 'content': INTRO_VARIANT + variant_plot})
-
+        if qsignature_plot:
+            self.sections.append({
+                'name': 'qSignature Profile',
+                'anchor': 'bcbio-fraction-qsignature',
+                'content': qsignature_plot})
 
     def parse_bcbio_report (self, raw_data):
         """ Parse the bcbio log file. """
@@ -289,10 +287,33 @@ class MultiqcModule(BaseMultiqcModule):
                 'ylab': 'pct of variants',
                 'xlab': 'number of reads | CG content',
                 'data_labels': [
-                    {'name': 'Reads depth', 'ymax':100},
-                    {'name': 'CG content', 'ymax':100, 'xmin':0, 'xmax':100}
+                    {'name': 'Variants depth', 'ylab': 'pct of variants', 'xlab': 'number of reads', 'ymax':100},
+                    {'name': 'CG content', 'ymax':100, 'ylab': 'pct of  variants', 'xlab': 'CG conetnt', 'xmin':0, 'xmax':100}
                     ]
         }
 
         if bcbio_data[0]:
             return linegraph(self, bcbio_data, config)
+
+    def bcbio_qsignature_chart (self, names) :
+        """ Make the bcbio assignment rates plot """
+
+        hmdata = list()
+        data = defaultdict(dict)
+        for f in self.find_log_files(names):
+            s_name = self.clean_s_name(f['fn'], root=None)
+            for l in f['f'].splitlines():
+                cols = l.strip().split()
+                data[cols[0]][cols[1]] = float(cols[2])
+                data[cols[1]][cols[0]] = float(cols[2])
+                data[cols[0]][cols[0]] = 0
+                data[cols[1]][cols[1]] = 0
+
+        names = data.keys()
+        for name in names:
+            row = list()
+            for name2 in names:
+                row.append(data[name][name2])
+            hmdata.append(row)
+
+        return plots.heatmap.plot(hmdata, names)
