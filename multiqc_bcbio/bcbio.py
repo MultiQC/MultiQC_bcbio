@@ -163,6 +163,15 @@ class MultiqcModule(BaseMultiqcModule):
             'title': 'Variations homozygous',
             'description': 'Numbers of Homozygous Variations',
         }
+        headers['rRNA_rate'] = {
+            'title': 'rRNA rate',
+            'description': '% alignments to rRNA',
+            'max': 100,
+            'min': 0,
+            'modify': lambda x: x * 100,
+            'scale': 'RdYlGn',
+            'format': '{:.1f}%'
+        }
         if any(['avg_coverage_per_region' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['avg_coverage_per_region'] = {
                     'title': 'Avg Depth',
