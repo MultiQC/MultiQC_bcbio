@@ -74,7 +74,8 @@ class MultiqcModule(BaseMultiqcModule):
         coverage_plot = self.bcbio_coverage_chart(config.sp['bcbio']['coverage'])
         coverage_avg_plot = self.bcbio_coverage_avg_chart(config.sp['bcbio']['coverage_avg'])
         variant_plot = self.bcbio_variants_chart(config.sp['bcbio']['variants'])
-        qsignature_plot = self.bcbio_qsignature_chart(config.sp['bcbio']['qsignature'])
+        qsignature_plot = None # disable plotting for now
+        #qsignature_plot = self.bcbio_qsignature_chart(config.sp['bcbio']['qsignature'])
         if coverage_avg_plot:
             self.sections.append({
                 'name': 'Coverage Profile',
