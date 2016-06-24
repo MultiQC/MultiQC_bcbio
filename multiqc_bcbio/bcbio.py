@@ -5,8 +5,10 @@
 from __future__ import print_function
 from collections import OrderedDict
 import logging
+import os
 import re
 from collections import defaultdict
+import yaml
 
 from multiqc import config, BaseMultiqcModule
 from multiqc import plots
@@ -76,6 +78,9 @@ class MultiqcModule(BaseMultiqcModule):
         variant_plot = self.bcbio_variants_chart(config.sp['bcbio']['variants'])
         qsignature_plot = None # disable plotting for now
         #qsignature_plot = self.bcbio_qsignature_chart(config.sp['bcbio']['qsignature'])
+        variant_stats = self.bcbio_variants_stats(config.sp['bcbio']['vcfstats'])
+        if variant_stats:
+            self.sections.append(variant_stats)
         if coverage_avg_plot:
             self.sections.append({
                 'name': 'Coverage Profile',
@@ -116,62 +121,70 @@ class MultiqcModule(BaseMultiqcModule):
         basic stats table at the top of the report """
 
         headers = OrderedDict()
-        headers['offtarget_pct'] = {
-            'title': '% Off-targets',
-            'description': '% Off-targets reads',
-            'max': 100,
-            'min': 0,
-            'modify': lambda x: x * 100,
-            'scale': 'RdYlGn',
-            'format': '{:.1f}%'
-        }
-        headers['Duplicates_pct'] = {
-            'title': '% Dups',
-            'description': '% of duplicated reads from samtools stats',
-            'max': 100,
-            'min': 0,
-            'modify': lambda x: x * 100,
-            'scale': 'RdYlGn',
-            'format': '{:.1f}%'
-        }
-        headers['avg_coverage_per_region'] = {
-            'title': 'Average coverage',
-            'description': 'Average coverage per target',
-            'scale': 'RdYlGn',
-            'format': '{:.2f}%'
-        }
-        headers['Variations_total'] = {
-            'title': 'Total Variations',
-            'description': 'Numbers of Total Variations',
-        }
-        headers['Variations_in_dbSNP_pct'] = {
-            'title': '% in dbSNP',
-            'description': 'Numbers of Variations in dbSNP',
-            'format': '{:.1f}%'
-        }
-        headers['Transition/Transversion'] = {
-            'title': 'Ts/Tv',
-            'description': 'Transition/Transversion Ratio',
-            'scale': 'RdYlGn',
-            'format': '{:.2f}%'
-        }
-        headers['Variations_heterozygous'] = {
-            'title': 'Variations heterozygous',
-            'description': 'Numbers of Heterozygous Variations',
-        }
-        headers['Variations_homozygous'] = {
-            'title': 'Variations homozygous',
-            'description': 'Numbers of Homozygous Variations',
-        }
-        headers['rRNA_rate'] = {
-            'title': 'rRNA rate',
-            'description': '% alignments to rRNA',
-            'max': 100,
-            'min': 0,
-            'modify': lambda x: x * 100,
-            'scale': 'RdYlGn',
-            'format': '{:.1f}%'
-        }
+        if any(['offtarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['offtarget_pct'] = {
+                'title': '% Off-targets',
+                'description': '% Off-targets reads',
+                'max': 100,
+                'min': 0,
+                'modify': lambda x: x * 100,
+                'scale': 'RdYlGn',
+                'format': '{:.1f}%'
+            }
+        if any(['Duplicates_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Duplicates_pct'] = {
+                'title': '% Dups',
+                'description': '% of duplicated reads from samtools stats',
+                'max': 100,
+                'min': 0,
+                'modify': lambda x: x * 100,
+                'scale': 'RdYlGn',
+                'format': '{:.1f}%'
+            }
+        if any(['avg_coverage_per_region' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['avg_coverage_per_region'] = {
+                'title': 'Average coverage',
+                'description': 'Average coverage per target',
+                'scale': 'RdYlGn',
+                'format': '{:.2f}%',
+                'min': 0
+            }
+        if any(['Variations_total' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Variations_total'] = {
+                'title': 'Total Variations',
+                'description': 'Numbers of Total Variations',
+                'min': 0
+            }
+        if any(['Variations_in_dbSNP_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Variations_in_dbSNP_pct'] = {
+                'title': '% in dbSNP',
+                'description': 'Numbers of Variations in dbSNP',
+                'format': '{:.1f}%',
+                'min': 0,
+                'max': 100
+            }
+        if any(['Variations_heterozygous' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Variations_heterozygous'] = {
+                'title': 'Variations heterozygous',
+                'description': 'Numbers of Heterozygous Variations',
+                'min': 0
+            }
+        if any(['Variations_homozygous' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Variations_homozygous'] = {
+                'title': 'Variations homozygous',
+                'description': 'Numbers of Homozygous Variations',
+                'min': 0
+            }
+        if any(['rRNA_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['rRNA_rate'] = {
+                'title': 'rRNA rate',
+                'description': '% alignments to rRNA',
+                'max': 100,
+                'min': 0,
+                'modify': lambda x: x * 100,
+                'scale': 'RdYlGn',
+                'format': '{:.1f}%'
+            }
         if any(['avg_coverage_per_region' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['avg_coverage_per_region'] = {
                     'title': 'Avg Depth',
@@ -259,6 +272,32 @@ class MultiqcModule(BaseMultiqcModule):
 
         if bcbio_data[0]:
             return linegraph(self, bcbio_data, config)
+
+    def bcbio_variants_stats(self, names) :
+        """ Parsing stats from VCF files """
+
+        bcbio_data = list()
+        parsed_data = defaultdict(dict)
+        for f in self.find_log_files(names):
+            with open(os.path.join(f['root'], f['fn'])) as in_handle:
+                parsed_data.update(yaml.safe_load(in_handle))
+        keys = OrderedDict()
+        defaults = {
+                'min': 0,
+                'shared_key': 'variants'
+                }
+        keys['Variations (total)'] = dict(defaults, **{'description': 'Total variants detected'})
+        keys['Variations (homozygous)'] = dict(defaults, **{'description': 'Total homozygous variants detected'})
+        keys['Variations (alt homozygous)'] = dict(defaults, **{'description': 'Total alternative homozygous variants detected'})
+        keys['Variations (heterozygous)'] = dict(defaults, **{'description': 'Total heterozygous variants detected'})
+        keys['Variations (SNPs)'] = dict(defaults, **{'description': 'Total SNPs detected'})
+        keys['Variations (indels)'] = dict(defaults, **{'description': 'Total indels detected'})
+        keys['Variations (ts/tv)'] = dict(defaults, **{'description': 'TS/TV ratio'})
+
+        if parsed_data:
+            return {'name': 'BCFtools stats',
+                    'anchor': 'bcftools-stats',
+                    'content': plots.table.plot(parsed_data, keys)}
 
     def bcbio_variants_chart (self, names) :
         """ Make the bcbio assignment rates plot """
