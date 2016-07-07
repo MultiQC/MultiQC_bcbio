@@ -12,6 +12,7 @@ import yaml
 
 from multiqc import config, BaseMultiqcModule
 from multiqc import plots
+from multiqc_bcbio import srna
 
 # Initialise the logger
 log = logging.getLogger(__name__)
@@ -62,6 +63,9 @@ class MultiqcModule(BaseMultiqcModule):
 
         log.info("Found {} reports".format(len(self.bcbio_data)))
 
+        # detect mirna
+        mirna_stats = srna.parse()
+        self.bcbio_data.update(mirna_stats.general)
         # Write parsed report data to a file
         self.write_data_file(self.bcbio_data, 'multiqc_bcbio_metrics')
 
@@ -79,6 +83,14 @@ class MultiqcModule(BaseMultiqcModule):
         qsignature_plot = None # disable plotting for now
         #qsignature_plot = self.bcbio_qsignature_chart(config.sp['bcbio']['qsignature'])
         variant_stats = self.bcbio_variants_stats(config.sp['bcbio']['vcfstats'])
+        if mirna_stats.mirs:
+            self.sections.append({'name': 'miRNAs stats',
+                                  'anchor': 'bcbio-mirs',
+                                  'content': mirna_stats.mirs})
+        if mirna_stats.iso:
+            self.sections.append({'name': 'Isomirs stats',
+                                  'anchor': 'bcbio-isomirs',
+                                  'content': mirna_stats.iso})
         if variant_stats:
             self.sections.append(variant_stats)
         if coverage_avg_plot:
@@ -121,6 +133,7 @@ class MultiqcModule(BaseMultiqcModule):
         basic stats table at the top of the report """
 
         headers = OrderedDict()
+        headers.update(srna.add_srna_headers(self.bcbio_data))
         if any(['offtarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['offtarget_pct'] = {
                 'title': '% Off-targets',
@@ -141,6 +154,8 @@ class MultiqcModule(BaseMultiqcModule):
                 'scale': 'RdYlGn',
                 'format': '{:.1f}%'
             }
+        if any(['Disambiguated_ambiguous_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers.update(_get_disambiguited(self.bcbio_data))
         if any(['avg_coverage_per_region' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['avg_coverage_per_region'] = {
                 'title': 'Average coverage',
@@ -153,7 +168,7 @@ class MultiqcModule(BaseMultiqcModule):
             headers['Variations_total'] = {
                 'title': 'Total Variations',
                 'description': 'Numbers of Total Variations',
-                'min': 0
+                'min': 0, 'format': '{:.0f}', 'share_key': 'variants'
             }
         if any(['Variations_in_dbSNP_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Variations_in_dbSNP_pct'] = {
@@ -167,13 +182,13 @@ class MultiqcModule(BaseMultiqcModule):
             headers['Variations_heterozygous'] = {
                 'title': 'Variations heterozygous',
                 'description': 'Numbers of Heterozygous Variations',
-                'min': 0
+                'min': 0, 'format': '{d}', 'share_key': 'variants'
             }
         if any(['Variations_homozygous' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Variations_homozygous'] = {
                 'title': 'Variations homozygous',
                 'description': 'Numbers of Homozygous Variations',
-                'min': 0
+                'min': 0, 'format': '{d}', 'share_key': 'variants'
             }
         if any(['rRNA_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['rRNA_rate'] = {
@@ -284,6 +299,7 @@ class MultiqcModule(BaseMultiqcModule):
         keys = OrderedDict()
         defaults = {
                 'min': 0,
+                'format': '{d}',
                 'shared_key': 'variants'
                 }
         keys['Variations (total)'] = dict(defaults, **{'description': 'Total variants detected'})
@@ -366,3 +382,18 @@ class MultiqcModule(BaseMultiqcModule):
             hmdata.append(row)
 
         return plots.heatmap.plot(hmdata, names)
+
+def _get_disambiguited(dt):
+    """Get headers for disamb."""
+    h = OrderedDict()
+    for s in dt:
+        for k in dt[s]:
+            if k.startswith("Disambiguated"):
+                h[k] = {
+                    'title': k.replace("_", " ").replace("Disambiguated", "Disamb."),
+                    'min': 0,
+                    'format': '{:.0f}',
+                    'shared_key': 'read_count',
+                    'scale': 'RdYlGn',
+                }
+    return h

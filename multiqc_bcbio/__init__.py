@@ -11,6 +11,11 @@ config.sp['bcbio'] = {'metrics': {'fn': '*_bcbio.txt'},
                       'variants': {'fn': '*_bcbio_variants.txt'},
                       'qsignature': {'fn': '*bcbio_qsignature.ma'},
                       'vcfstats': {'fn': '*_bcbio_variants_stats.txt'},
+                      'seqbuster': {'contents': 'seqbuster'}
                       }
 
 config.fn_clean_exts.append({'type': 'regex', 'pattern': '_bcbio.*'})
+
+
+config.table_columns_visible.update({'FastQC':{'percent_duplicates': False,
+                                               'total_sequences': False}})
