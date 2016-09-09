@@ -42,8 +42,8 @@ class MultiqcModule(BaseMultiqcModule):
         super(MultiqcModule, self).__init__(name='bcbio',
         anchor='bcbio', target='bcbio',
         href='http://github.com/bchapman/bcbio-nextgen/',
-        info="bcbio-nextgen makes calcultation of"\
-        "coverage over regions and variants"\
+        info="bcbio-nextgen calculates "\
+        "coverage over target regions and variants"\
         "if data is available during the analysis.")
 
         # Find and load any bcbio reports
@@ -311,7 +311,7 @@ class MultiqcModule(BaseMultiqcModule):
         keys['Variations (ts/tv)'] = dict(defaults, **{'description': 'TS/TV ratio'})
 
         if parsed_data:
-            return {'name': 'BCFtools stats',
+            return {'name': 'Variant Summary Table (bcftools)',
                     'anchor': 'bcftools-stats',
                     'content': plots.table.plot(parsed_data, keys)}
 
