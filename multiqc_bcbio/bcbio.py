@@ -205,7 +205,8 @@ class MultiqcModule(BaseMultiqcModule):
                     'title': 'Avg Depth',
                     'description': 'Average read coverage on region'
                     }
-        self.general_stats_addcols(self.bcbio_data, headers)
+        if len(headers.keys()):
+            self.general_stats_addcols(self.bcbio_data, headers)
 
     def bcbio_coverage_chart (self, names) :
         """ Make the bcbio assignment rates plot """
