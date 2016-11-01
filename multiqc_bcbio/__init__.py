@@ -17,5 +17,13 @@ config.sp['bcbio'] = {'metrics': {'fn': '*_bcbio.txt'},
 config.fn_clean_exts.append({'type': 'regex', 'pattern': '_bcbio.*'})
 
 
-config.table_columns_visible.update({'FastQC':{'percent_duplicates': False,
-                                               'total_sequences': False}})
+config.table_columns_visible.update({
+    'FastQC': {
+        'percent_duplicates': False,
+        'total_sequences': False,
+        'percent_gc': False,
+    },
+    'QualiMap': {
+        'percentage_aligned': False,
+    }
+})

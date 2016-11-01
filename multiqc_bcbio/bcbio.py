@@ -134,6 +134,12 @@ class MultiqcModule(BaseMultiqcModule):
 
         headers = OrderedDict()
         headers.update(srna.add_srna_headers(self.bcbio_data))
+        if any(['avg_coverage' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['avg_coverage'] = {
+                'title': 'Avg. Depth',
+                'description': 'Average target read coverage',
+                'format': '{:.2f}',
+            }
         if any(['offtarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['offtarget_pct'] = {
                 'title': '% Off-targets',
@@ -147,7 +153,17 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Duplicates_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Duplicates_pct'] = {
                 'title': '% Dups',
-                'description': '% of duplicated reads from samtools stats',
+                'description': '% of duplicated mapped reads',
+                'max': 100,
+                'min': 0,
+                'modify': lambda x: x * 100,
+                'scale': 'RdYlGn',
+                'format': '{:.1f}%'
+            }
+        if any(['usable_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['usable_rate'] = {
+                'title': '% Usable',
+                'description': 'Share of unique reads mapped on target in the total number of original reads.',
                 'max': 100,
                 'min': 0,
                 'modify': lambda x: x * 100,
@@ -156,14 +172,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Disambiguated_ambiguous_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers.update(_get_disambiguited(self.bcbio_data))
-        if any(['avg_coverage_per_region' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['avg_coverage_per_region'] = {
-                'title': 'Average coverage',
-                'description': 'Average coverage per target',
-                'scale': 'RdYlGn',
-                'format': '{:.2f}%',
-                'min': 0
-            }
+
         if any(['Variations_total' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Variations_total'] = {
                 'title': 'Total Variations',
@@ -200,11 +209,6 @@ class MultiqcModule(BaseMultiqcModule):
                 'scale': 'RdYlGn',
                 'format': '{:.1f}%'
             }
-        if any(['avg_coverage_per_region' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['avg_coverage_per_region'] = {
-                    'title': 'Avg Depth',
-                    'description': 'Average read coverage on region'
-                    }
         if len(headers.keys()):
             self.general_stats_addcols(self.bcbio_data, headers)
 
