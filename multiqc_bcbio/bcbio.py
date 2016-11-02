@@ -43,7 +43,7 @@ class MultiqcModule(BaseMultiqcModule):
         anchor='bcbio', target='bcbio',
         href='http://github.com/bchapman/bcbio-nextgen/',
         info="bcbio-nextgen calculates "\
-        "coverage over target regions and variants"\
+        "coverage over target regions and variants "\
         "if data is available during the analysis.")
 
         # Find and load any bcbio reports
@@ -72,6 +72,11 @@ class MultiqcModule(BaseMultiqcModule):
         # Basic Stats Table
         # Report table is immutable, so just updating it works
         self.metrics_stats_table()
+
+        # General target stats
+        target_infos = list(self.find_log_files(config.sp['bcbio']['target']))
+        if len(target_infos) == 1:
+            self.add_general_stats(yaml.load(target_infos[0]['f']))
 
         # Coverage plot
         # Only one section, so add to the intro
@@ -211,6 +216,50 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if len(headers.keys()):
             self.general_stats_addcols(self.bcbio_data, headers)
+
+    def add_general_stats(self, data):
+        def _format_number(value, unit=None):
+            unit_str = ('<span style="font-size: 50%; line-height: 1; ">&nbsp;</span>' + unit) if unit else ''
+            if value <= 9999:
+                return '{value}{unit_str}'.format(**locals())
+            else:
+                v = '{value:,}{unit_str}'.format(**locals())
+                return v.replace(',', '<span style="margin-left: 0.2em;"></span>')
+
+        def _format_bed_info(name, d, ref_size):
+            bed, size, regions, genes = d['bed'], _format_number(d['size'], 'bp'), _format_number(d.get('regions')), _format_number(d.get('genes'))
+            percent = (100.0 * d['size'] / ref_size) if ref_size else 0
+            html = '<b>{name}:</b> {bed} ({size} bases or {percent:.2f}% of the genome'
+            if regions:
+                html += ', {regions} regions'
+            if genes:
+                html += ', {genes} genes'
+            html += ')<br>'
+            return html.format(**locals())
+
+        genome_info = data.get('genome_info')  # {name, size}
+        coverage_bed_info = data.get('coverage_bed_info')
+        variants_regions_info = data.get('variants_regions_info')
+
+        if genome_info:
+            self.intro += '<b>Genome:</b> ' + genome_info['name'] + ', ' + _format_number(genome_info['size'], 'bp') + '<br>'
+
+            if variants_regions_info and (not coverage_bed_info or coverage_bed_info['bed'] == variants_regions_info['bed']):
+                self.intro += _format_bed_info('Target', variants_regions_info, genome_info['size'])
+            else:
+                if coverage_bed_info:
+                    self.intro += _format_bed_info('Target for coverage stats', coverage_bed_info, genome_info['size'])
+                else:
+                    self.intro += '<b>Target for coverage stats:</b> whole genome<br>'
+
+                if variants_regions_info:
+                    if variants_regions_info.get('bed'):
+                        self.intro += _format_bed_info('Target for variant calling', variants_regions_info, genome_info['size'])
+                    else:
+                        self.intro += '<b>Target for variant calling:</b> whole genome<br>'
+                else:
+                    self.intro += '<b>Target for variant calling:</b> callable regions<br>'
+
 
     def bcbio_coverage_chart (self, names) :
         """ Make the bcbio assignment rates plot """
