@@ -184,8 +184,8 @@ class MultiqcModule(BaseMultiqcModule):
                 'description': 'Numbers of Heterozygous Variations',
                 'min': 0, 'format': '{d}', 'share_key': 'variants'
             }
-        if any(['Variations_homozygous' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['Variations_homozygous'] = {
+        if any(['Variations_alt_homozygous' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Variations_alt_homozygous'] = {
                 'title': 'Variations homozygous',
                 'description': 'Numbers of Homozygous Variations',
                 'min': 0, 'format': '{d}', 'share_key': 'variants'
