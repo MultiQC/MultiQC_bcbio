@@ -23,9 +23,14 @@ config.table_columns_visible.update({
     'FastQC': {
         'percent_duplicates': False,
         'total_sequences': False,
-        'percent_gc': False,
     },
     'QualiMap': {
         'percentage_aligned': False,
+    },
+    'Samtools Stats': {
+        'non-primary_alignments': False,
+        'reads_mapped': False,
+        'reads_mapped_percent': False,
+        'raw_total_sequences': False,
     }
 })
