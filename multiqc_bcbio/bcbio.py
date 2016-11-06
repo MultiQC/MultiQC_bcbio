@@ -139,42 +139,74 @@ class MultiqcModule(BaseMultiqcModule):
 
         headers = OrderedDict()
         headers.update(srna.add_srna_headers(self.bcbio_data))
-        if any(['avg_coverage' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['avg_coverage'] = {
-                'title': 'Avg. Depth',
-                'description': 'Average target read coverage',
-                'format': '{:.2f}',
-            }
-        if any(['offtarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['offtarget_pct'] = {
-                'title': '% Off-targets',
-                'description': '% Off-targets reads',
-                'max': 100,
+
+        if any(['Total_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Total_reads'] = {
+                'title': 'Reads',
+                'description': 'Total sequences in the bam file',
                 'min': 0,
-                'modify': lambda x: x * 100,
+                'modify': lambda x: x / 1000000,
+                'shared_key': 'read_count',
+                'format': '{:.2f} M',
+            }
+        if any(['Mapped_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Mapped_reads'] = {
+                'title': 'Mapped',
+                'description': 'Mapped reads number',
+                'min': 0,
+                'modify': lambda x: x / 1000000,
+                'shared_key': 'read_count',
+                'format': '{:.2f} M',
+                'hidden': True,
+            }
+        if any(['Mapped_reads_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Mapped_reads_pct'] = {
+                'title': '% Mapped',
+                'description': '% Mapped reads',
+                'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
-                'format': '{:.1f}%'
+                'format': '{:.1f}%',
             }
         if any(['Duplicates_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Duplicates_pct'] = {
                 'title': '% Dups',
-                'description': '% of duplicated mapped reads',
-                'max': 100,
-                'min': 0,
-                'modify': lambda x: x * 100,
+                'description': '% Duplicated mapped reads',
+                'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
                 'format': '{:.1f}%'
             }
-        if any(['usable_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['usable_rate'] = {
+        if any(['Ontarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Ontarget_pct'] = {
+                'title': '% On-targets',
+                'description': '% On-target mapped not-duplicate reads',
+                'min': 0, 'max': 100, 'suffix': '%',
+                'scale': 'RdYlGn',
+                'format': '{:.1f}%'
+            }
+        if any(['Ontarget_padded_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Ontarget_padded_pct'] = {
+                'title': '% On-targets+200bp',
+                'description': '% Reads that overlap target regions extended by 200 bp. Expected to be 1-2% higher.',
+                'min': 0, 'max': 100, 'suffix': '%',
+                'scale': 'RdYlGn',
+                'format': '{:.1f}%',
+                'hidden': True,
+            }
+        if any(['Usable_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Usable_pct'] = {
                 'title': '% Usable',
-                'description': 'Share of unique reads mapped on target in the total number of original reads.',
-                'max': 100,
-                'min': 0,
-                'modify': lambda x: x * 100,
+                'description': '% Unique reads mapped on target in the total number of original reads.',
+                'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
                 'format': '{:.1f}%'
             }
+        if any(['Avg_coverage' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Avg_coverage'] = {
+                'title': 'Avg. Depth',
+                'description': 'Average target read coverage',
+                'format': '{:.2f}',
+            }
+
         if any(['Disambiguated_ambiguous_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers.update(_get_disambiguited(self.bcbio_data))
 
@@ -218,50 +250,39 @@ class MultiqcModule(BaseMultiqcModule):
             self.general_stats_addcols(self.bcbio_data, headers)
 
     def add_general_stats(self, data):
-        def _format_number(value, unit=None):
-            unit_str = ('<span style="font-size: 50%; line-height: 1; ">&nbsp;</span>' + unit) if unit else ''
-            if value <= 9999:
-                return '{value}{unit_str}'.format(**locals())
-            else:
-                v = '{value:,}{unit_str}'.format(**locals())
-                return v.replace(',', '<span style="margin-left: 0.2em;"></span>')
-
-        def _format_bed_info(name, d, ref_size):
-            bed, size, regions, genes = d['bed'], _format_number(d['size'], 'bp'), _format_number(d.get('regions')), _format_number(d.get('genes'))
-            percent = (100.0 * d['size'] / ref_size) if ref_size else 0
-            html = '<b>{name}:</b> {bed} ({size} bases or {percent:.2f}% of the genome'
-            if regions:
-                html += ', {regions} regions'
-            if genes:
-                html += ', {genes} genes'
-            html += ')<br>'
-            return html.format(**locals())
-
         genome_info = data.get('genome_info')  # {name, size}
         coverage_bed_info = data.get('coverage_bed_info')
         variants_regions_info = data.get('variants_regions_info')
 
-        if genome_info:
-            self.intro += '<b>Genome:</b> ' + genome_info['name'] + ', ' + _format_number(genome_info['size'], 'bp') + '<br>'
+        def _format_bed_info(name, d):
+            bed, size, regions, genes = d['bed'], _format_decimal(d.get('size')), _format_decimal(d.get('regions')), _format_decimal(d.get('genes'))
+            html = '<b>{name}:</b> {bed}'
+            if size is not None:
+                percent = (100.0 * d['size'] / genome_info['size']) if genome_info.get('size') else 0
+                html += ' ({size} bp'
+                if percent >= 0.01:
+                    html += ' or {percent:.2f}% of the genome'
+                if regions is not None:
+                    html += ', {regions} region' + ('s' if d.get('regions') != 1 else '')
+                if genes is not None:
+                    html += ', {genes} gene' + ('s' if d.get('genes') != 1 else '')
+                html += ')'
+            return html.format(**locals())
 
-            if variants_regions_info and (not coverage_bed_info or coverage_bed_info['bed'] == variants_regions_info['bed']):
-                self.intro += _format_bed_info('Target', variants_regions_info, genome_info['size'])
+        if genome_info:
+            self.intro += '<b>Genome:</b> ' + genome_info['name'] + ', ' + _format_decimal(genome_info['size'], 'bp') + '<br>'
+
+            if coverage_bed_info and coverage_bed_info['bed'] == variants_regions_info['bed']:
+                self.intro += _format_bed_info('Target for variant calling and coverage metrics', variants_regions_info)
             else:
                 if coverage_bed_info:
-                    self.intro += _format_bed_info('Target for coverage stats', coverage_bed_info, genome_info['size'])
-                else:
-                    self.intro += '<b>Target for coverage stats:</b> whole genome<br>'
+                    self.intro += _format_bed_info('Target for coverage metrics', coverage_bed_info) + '<br>'
+                self.intro += _format_bed_info('Target for variant calling', variants_regions_info)
+            # if data.get('coverage_interval'):
+            #     self.intro += ', <b>coverage interval</b>: ' + data.get('coverage_interval')
+            self.intro += '<br>'
 
-                if variants_regions_info:
-                    if variants_regions_info.get('bed'):
-                        self.intro += _format_bed_info('Target for variant calling', variants_regions_info, genome_info['size'])
-                    else:
-                        self.intro += '<b>Target for variant calling:</b> whole genome<br>'
-                else:
-                    self.intro += '<b>Target for variant calling:</b> callable regions<br>'
-
-
-    def bcbio_coverage_chart (self, names) :
+    def bcbio_coverage_chart(self, names):
         """ Make the bcbio assignment rates plot """
 
         bcbio_data = []
@@ -437,6 +458,7 @@ class MultiqcModule(BaseMultiqcModule):
 
         return plots.heatmap.plot(hmdata, names)
 
+
 def _get_disambiguited(dt):
     """Get headers for disamb."""
     h = OrderedDict()
@@ -451,3 +473,14 @@ def _get_disambiguited(dt):
                     'scale': 'RdYlGn',
                 }
     return h
+
+
+def _format_decimal(value, unit=None):
+    if value is None:
+        return None
+    unit_str = ('<span style="font-size: 50%; line-height: 1; ">&nbsp;</span>' + unit) if unit else ''
+    if value <= 9999:
+        return '{value}{unit_str}'.format(**locals())
+    else:
+        v = '{value:,}{unit_str}'.format(**locals())
+        return v.replace(',', '<span style="margin-left: 0.2em;"></span>')
