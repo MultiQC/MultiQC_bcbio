@@ -88,6 +88,10 @@ class MultiqcModule(BaseMultiqcModule):
         qsignature_plot = None # disable plotting for now
         #qsignature_plot = self.bcbio_qsignature_chart(config.sp['bcbio']['qsignature'])
         variant_stats = self.bcbio_variants_stats(config.sp['bcbio']['vcfstats'])
+        umi_stats = self.bcbio_umi_stats(config.sp["bcbio"]["umi"])
+
+        if umi_stats:
+            self.sections.append(umi_stats)
         if mirna_stats.mirs:
             self.sections.append({'name': 'miRNAs stats',
                                   'anchor': 'bcbio-mirs',
@@ -362,6 +366,40 @@ class MultiqcModule(BaseMultiqcModule):
 
         if bcbio_data[0]:
             return linegraph(self, bcbio_data, config)
+
+    def bcbio_umi_stats(self, names):
+        """Prepare table of statistics on UMIs in the file.
+        """
+        keys = OrderedDict()
+        parsed_data = defaultdict(dict)
+        for f in self.find_log_files(names):
+            with open(os.path.join(f['root'], f['fn'])) as in_handle:
+                parsed_data.update(yaml.safe_load(in_handle))
+        if len(parsed_data) > 0:
+            keys['umi_consensus_mapped'] = {'title': 'Consensus mapped',
+                                            'description': 'Count of UMI consensus reads mapped',
+                                            'format': '{:n}'}
+            keys['umi_consensus_pct'] = {'title': 'Consensus reduction',
+                                         'description': 'Percent of original reads removed by consensus',
+                                         'format': '{:.1f}%'}
+            keys['umi_baseline_mapped'] = {'title': "Original mapped",
+                                           'description': 'Count of original mapped reads',
+                                           'format': '{:n}'}
+            keys['umi_baseline_duplicate_pct'] = {'title': 'Original duplicates',
+                                                  'description': 'Percentage original duplicates',
+                                                  'format': '{:.1f}%'}
+            keys['umi_baseline_all'] = {'title': 'Original total',
+                                        'description': 'Total reads in the original BAM',
+                                        'format': '{:n}'}
+            keys['umi_reduction_median'] = {'title': 'Duplicate reduction (median)',
+                                            'description': 'Reduction in duplicates per position by UMIs (median)',
+                                            'format': '{:n}x'}
+            keys['umi_reduction_max'] = {'title': 'Duplicate reduction (max)',
+                                         'description': 'Reduction in duplicates per position by UMIs (maximum)',
+                                         'format': '{:n}x'}
+            return {'name': 'UMI barcode statistics',
+                    'anchor': 'umi-stats',
+                    'content': plots.table.plot(parsed_data, keys)}
 
     def bcbio_variants_stats(self, names) :
         """ Parsing stats from VCF files """

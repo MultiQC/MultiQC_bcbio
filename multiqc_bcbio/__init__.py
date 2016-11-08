@@ -12,7 +12,8 @@ config.sp['bcbio'] = {'metrics': {'fn': '*_bcbio.txt'},
                       'target': {'fn': 'target_info.yaml'},
                       'qsignature': {'fn': '*bcbio_qsignature.ma'},
                       'vcfstats': {'fn': '*_bcbio_variants_stats.txt'},
-                      'seqbuster': {'contents': 'seqbuster'}
+                      'seqbuster': {'contents': 'seqbuster'},
+                      'umi': {'fn': '*_umi_stats.yaml'},
                       }
 
 config.fn_clean_exts.append({'type': 'regex', 'pattern': '_bcbio.*'})
