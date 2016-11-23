@@ -20,7 +20,7 @@ config.fn_clean_exts.append({'type': 'regex', 'pattern': '_bcbio.*'})
 
 
 
-config.table_columns_visible.update({
+for module, value_dict in {
     'FastQC': {
         'percent_duplicates': False,
         'total_sequences': False,
@@ -33,5 +33,9 @@ config.table_columns_visible.update({
         'reads_mapped': False,
         'reads_mapped_percent': False,
         'raw_total_sequences': False,
-    }
-})
+    }}.items():
+
+    if module not in config.table_columns_visible:
+        config.table_columns_visible[module] = dict()
+    config.table_columns_visible[module].update(value_dict)
+
