@@ -76,7 +76,7 @@ class MultiqcModule(BaseMultiqcModule):
         # General target stats
         target_infos = list(self.find_log_files(config.sp['bcbio']['target']))
         if len(target_infos) == 1:
-            self.add_general_stats(yaml.load(target_infos[0]['f']))
+            add_project_info(yaml.load(target_infos[0]['f']))
 
         # Coverage plot
         # Only one section, so add to the intro
@@ -252,39 +252,6 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if len(headers.keys()):
             self.general_stats_addcols(self.bcbio_data, headers)
-
-    def add_general_stats(self, data):
-        genome_info = data.get('genome_info')  # {name, size}
-        coverage_bed_info = data.get('coverage_bed_info')
-        variants_regions_info = data.get('variants_regions_info')
-
-        def _format_bed_info(name, d):
-            bed, size, regions, genes = d['bed'], _format_decimal(d.get('size')), _format_decimal(d.get('regions')), _format_decimal(d.get('genes'))
-            html = '<b>{name}:</b> {bed}'
-            if size is not None:
-                percent = (100.0 * d['size'] / genome_info['size']) if genome_info.get('size') else 0
-                html += ' ({size} bp'
-                if percent >= 0.01:
-                    html += ' or {percent:.2f}% of the genome'
-                if regions is not None:
-                    html += ', {regions} region' + ('s' if d.get('regions') != 1 else '')
-                if genes is not None:
-                    html += ', {genes} gene' + ('s' if d.get('genes') != 1 else '')
-                html += ')'
-            return html.format(**locals())
-
-        if genome_info:
-            self.intro += '<b>Genome:</b> ' + genome_info['name'] + ', ' + _format_decimal(genome_info['size'], 'bp') + '<br>'
-
-            if coverage_bed_info and coverage_bed_info['bed'] == variants_regions_info['bed']:
-                self.intro += _format_bed_info('Target for variant calling and coverage metrics', variants_regions_info)
-            else:
-                if coverage_bed_info:
-                    self.intro += _format_bed_info('Target for coverage metrics', coverage_bed_info) + '<br>'
-                self.intro += _format_bed_info('Target for variant calling', variants_regions_info)
-            # if data.get('coverage_interval'):
-            #     self.intro += ', <b>coverage interval</b>: ' + data.get('coverage_interval')
-            self.intro += '<br>'
 
     def bcbio_coverage_chart(self, names):
         """ Make the bcbio assignment rates plot """
@@ -528,10 +495,46 @@ def _get_disambiguited(dt):
     return h
 
 
+def add_project_info(data):
+    genome_info = data.get('genome_info')  # {name, size}
+    coverage_bed_info = data.get('coverage_bed_info')
+    variants_regions_info = data.get('variants_regions_info')
+
+    if genome_info:
+        config.report_header_info = []
+        config.report_header_info.append({"Genome:": genome_info['name'] + ', ' + _format_decimal(genome_info['size'], 'bp')})
+        if coverage_bed_info and coverage_bed_info['bed'] == variants_regions_info['bed']:
+            config.report_header_info.append({"Target:": _format_bed_info(variants_regions_info, genome_info)})
+        else:
+            if coverage_bed_info:
+                config.report_header_info.append({"Target for coverage:": _format_bed_info(coverage_bed_info, genome_info)})
+            config.report_header_info.append({"Target for var. calling:": _format_bed_info(variants_regions_info, genome_info)})
+
+
+def _format_bed_info(d, genome_info):
+    bed, size, regions, genes = d['bed'], \
+                                _format_decimal(d.get('size')), \
+                                _format_decimal(d.get('regions')),\
+                                _format_decimal(d.get('genes'))
+    bed_name = os.path.basename(bed)
+    html = '<a href={bed}>{bed_name}</a>'
+    if size is not None:
+        percent = (100.0 * d['size'] / genome_info['size']) if genome_info.get('size') else 0
+        html += ' ({size} bp'
+        if percent >= 0.01:
+            html += ' or {percent:.2f}% of the genome'
+        if regions is not None:
+            html += ', {regions} region' + ('s' if d.get('regions') != 1 else '')
+        if genes is not None:
+            html += ', {genes} gene' + ('s' if d.get('genes') != 1 else '')
+        html += ')'
+    return html.format(**locals())
+
+
 def _format_decimal(value, unit=None):
     if value is None:
         return None
-    unit_str = ('<span style="font-size: 50%; line-height: 1; ">&nbsp;</span>' + unit) if unit else ''
+    unit_str = ('<span style="font-size: 50%; line-height: 1;">&nbsp;</span>' + unit) if unit else ''
     if value <= 9999:
         return '{value}{unit_str}'.format(**locals())
     else:
