@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 INTRO_COVERAGE = """
                     <p>This section shows the percentage of regions with a certain
-                    level of nucleotides covered by a given number of reads.</p>
+                    level of nucleotides covered by a given number of reads:</p>
                  """
 INTRO_COVERAGE_AVG = """
                     <p>This section shows the percentage of nucleotides (y-axis)
@@ -123,7 +123,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'anchor': 'bcbio-fraction-qsignature',
                 'content': qsignature_plot})
 
-    def parse_bcbio_report (self, raw_data):
+    def parse_bcbio_report(self, raw_data):
         """ Parse the bcbio log file. """
         parsed_data = {}
         for line in raw_data.split("\n"):
@@ -256,7 +256,6 @@ class MultiqcModule(BaseMultiqcModule):
     def bcbio_coverage_chart(self, names):
         """ Make the bcbio assignment rates plot """
 
-        bcbio_data = []
         parsed_data = defaultdict(dict)
         seen = set()
         for f in self.find_log_files(names):
@@ -264,48 +263,40 @@ class MultiqcModule(BaseMultiqcModule):
             for line in f['f'].split("\n"):
                 if not line.startswith("percent"):
                     continue
-                fields = line.split("\t")
-                x = 100 - float(fields[1])
-                y = float(fields[2])
-                if s_name not in parsed_data[fields[0]]:
-                    parsed_data[fields[0]][s_name] = []
-                parsed_data[fields[0]][s_name].append((x, y))
+                cutoff_reads, region_pct, bases_pct, sample = line.split("\t")
+                x = 100 - float(region_pct)
+                y = float(bases_pct)
+                if s_name not in parsed_data[cutoff_reads]:
+                    parsed_data[cutoff_reads][s_name] = []
+                parsed_data[cutoff_reads][s_name].append((x, y))
                 seen.add(s_name)
             if s_name in seen:
                 self.add_data_source(f)
-        for ipct in [1, 5, 10, 20, 40, 50, 60, 70, 80, 100]:
-            pct = "percentage%s" % ipct
-            data_obj = {}
-            for s in parsed_data[pct]:
-                data_obj.update({s: dict(parsed_data[pct][s])})
-            bcbio_data.append(data_obj)
 
-        # Config for the plot
-        config = {
+        bcbio_data = []
+        cutoffs = []
+        for pct_key in sorted(parsed_data.keys(), key=lambda k: int(k.split("percentage")[1])):
+            if any(any(v > 0 for v in dict(d).values()) for d in parsed_data[pct_key].values()):
+                data_obj = {}
+                for s in parsed_data[pct_key]:
+                    data_obj.update({s: dict(parsed_data[pct_key][s])})
+                bcbio_data.append(data_obj)
+                cutoffs.append(int(pct_key.split("percentage")[1]))
+
+        if bcbio_data[0] and cutoffs:
+            return linegraph(self, bcbio_data, {
                 'data_labels': [
-                    {'name': 'cutoff 1 nts'},
-                    {'name': 'cutoff 5 nts'},
-                    {'name': 'cutoff 10 nts'},
-                    {'name': 'cutoff 20 nts'},
-                    {'name': 'cutoff 40 nts'},
-                    {'name': 'cutoff 50 nts'},
-                    {'name': 'cutoff 60 nts'},
-                    {'name': 'cutoff 70 nts'},
-                    {'name': 'cutoff 80 nts'},
-                    {'name': 'cutoff 100 nts'},
-                    ],
-            'id': 'bcbio_coverage_plot',
-            'title': 'completeness',
-            'ylab': '% nts in the regions covered',
-            'xlab': '% regions',
-            'ymin': 0,
-            'ymax': 100,
-        }
+                    {'name': str(c) + 'x'} for c in cutoffs
+                ],
+                'id': 'bcbio_coverage_plot',
+                'title': 'Completeness',
+                'xlab': '% regions',
+                'ylab': '% bases in the regions covered',
+                'ymin': 0,
+                'ymax': 100,
+            })
 
-        if bcbio_data[0]:
-            return linegraph(self, bcbio_data, config)
-
-    def bcbio_coverage_avg_chart (self, names) :
+    def bcbio_coverage_avg_chart(self, names):
         """ Make the bcbio assignment rates plot """
 
         bcbio_data = list()
@@ -315,9 +306,9 @@ class MultiqcModule(BaseMultiqcModule):
             for line in f['f'].split("\n"):
                 if not line.startswith("percentage"):
                     continue
-                fields = line.split("\t")
-                y = float(fields[1])
-                x = float(fields[0].replace("percentage", ""))
+                cutoff_reads, bases_pct, sample = line.split("\t")
+                y = float(bases_pct)
+                x = float(cutoff_reads.replace("percentage", ""))
                 parsed_data_depth[s_name][x] = y
 
             if s_name in parsed_data_depth:
@@ -325,14 +316,11 @@ class MultiqcModule(BaseMultiqcModule):
 
         bcbio_data.append(parsed_data_depth)
 
-        # Config for the plot
-        config = {
-                'xlab': "number of reads",
-                'ylab': "pct of region covevered"
-        }
-
         if bcbio_data[0]:
-            return linegraph(self, bcbio_data, config)
+            return linegraph(self, bcbio_data, {
+                'xlab': "number of reads",
+                'ylab': '% bases in the regions covered',
+            })
 
     def bcbio_umi_stats(self, names):
         """Prepare table of statistics on UMIs in the file.
@@ -383,10 +371,9 @@ class MultiqcModule(BaseMultiqcModule):
                 'anchor': 'umi-stats',
                 'content': plots.table.plot(parsed_data, keys)}
 
-    def bcbio_variants_stats(self, names) :
+    def bcbio_variants_stats(self, names):
         """ Parsing stats from VCF files """
 
-        bcbio_data = list()
         parsed_data = defaultdict(dict)
         for f in self.find_log_files(names):
             with open(os.path.join(f['root'], f['fn'])) as in_handle:
@@ -455,7 +442,7 @@ class MultiqcModule(BaseMultiqcModule):
         if bcbio_data[0]:
             return linegraph(self, bcbio_data, config)
 
-    def bcbio_qsignature_chart (self, names) :
+    def bcbio_qsignature_chart(self, names) :
         """ Make the bcbio assignment rates plot """
 
         hmdata = list()
