@@ -243,7 +243,9 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['rRNA_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['rRNA_rate'] = {
                 'title': 'rRNA pct',
-                'description': '% alignments to rRNA',
+                'description': '% alignments to rRNA. Depending on the library preparation methods used, the proportion '
+                               'of rRNA sequences should be quite low. If large proportions of rRNA sequences are seen, '
+                               'it is wise to consider if the depth of the remaining sequences is sufficient for further analyses.',
                 'max': 100,
                 'min': 0,
                 'modify': lambda x: x * 100,
@@ -474,6 +476,10 @@ def _get_disambiguited(dt):
             if k.startswith("Disambiguated"):
                 h[k] = {
                     'title': k.replace("_", " ").replace("Disambiguated", "Disamb."),
+                    'description': 'When samples are at risk of cross-species contamination (e.g. those '
+                                   'derived from PDXs), an attempt is performed to remove reads that are '
+                                   'assigned to the different species involved. This metric shows the number '
+                                   'of removed reads.',
                     'min': 0,
                     'format': '{:.0f}',
                     'shared_key': 'read_count',
