@@ -165,7 +165,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Mapped_reads_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads_pct'] = {
-                'title': '% Mapped',
+                'title': '% Aln',
                 'description': '% Mapped reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -173,7 +173,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Duplicates_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Duplicates_pct'] = {
-                'title': '% Dups',
+                'title': '% Dup',
                 'description': '% Duplicated mapped reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -181,7 +181,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Ontarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Ontarget_pct'] = {
-                'title': '% On-targets',
+                'title': '% On-trg',
                 'description': '% On-target mapped not-duplicate reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -189,7 +189,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Ontarget_padded_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Ontarget_padded_pct'] = {
-                'title': '% On-targets+200bp',
+                'title': '% On-trg+200bp',
                 'description': '% Reads that overlap target regions extended by 200 bp. Expected to be 1-2% higher.',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -206,7 +206,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Avg_coverage' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Avg_coverage'] = {
-                'title': 'Avg. Depth',
+                'title': 'Depth',
                 'description': 'Average target read coverage',
                 'format': '{:.2f}',
             }
@@ -242,7 +242,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['rRNA_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['rRNA_rate'] = {
-                'title': 'rRNA rate',
+                'title': 'rRNA pct',
                 'description': '% alignments to rRNA',
                 'max': 100,
                 'min': 0,
