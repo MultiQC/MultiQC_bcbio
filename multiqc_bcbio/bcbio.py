@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 INTRO_COVERAGE = """
                     <p>This section shows the percentage of regions with a certain
-                    level of nucleotides covered by a given number of reads.</p>
+                    level of nucleotides covered by a given number of reads:</p>
                  """
 INTRO_COVERAGE_AVG = """
                     <p>This section shows the percentage of nucleotides (y-axis)
@@ -76,7 +76,7 @@ class MultiqcModule(BaseMultiqcModule):
         # General target stats
         target_infos = list(self.find_log_files(config.sp['bcbio']['target']))
         if len(target_infos) == 1:
-            self.add_general_stats(yaml.load(target_infos[0]['f']))
+            add_project_info(yaml.load(target_infos[0]['f']))
 
         # Coverage plot
         # Only one section, so add to the intro
@@ -123,7 +123,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'anchor': 'bcbio-fraction-qsignature',
                 'content': qsignature_plot})
 
-    def parse_bcbio_report (self, raw_data):
+    def parse_bcbio_report(self, raw_data):
         """ Parse the bcbio log file. """
         parsed_data = {}
         for line in raw_data.split("\n"):
@@ -165,7 +165,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Mapped_reads_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads_pct'] = {
-                'title': '% Mapped',
+                'title': '% Aln',
                 'description': '% Mapped reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -173,7 +173,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Duplicates_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Duplicates_pct'] = {
-                'title': '% Dups',
+                'title': '% Dup',
                 'description': '% Duplicated mapped reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -181,7 +181,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Ontarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Ontarget_pct'] = {
-                'title': '% On-targets',
+                'title': '% On-trg',
                 'description': '% On-target mapped not-duplicate reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -189,7 +189,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Ontarget_padded_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Ontarget_padded_pct'] = {
-                'title': '% On-targets+200bp',
+                'title': '% On-trg+200bp',
                 'description': '% Reads that overlap target regions extended by 200 bp. Expected to be 1-2% higher.',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -206,7 +206,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Avg_coverage' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Avg_coverage'] = {
-                'title': 'Avg. Depth',
+                'title': 'Depth',
                 'description': 'Average target read coverage',
                 'format': '{:.2f}',
             }
@@ -242,8 +242,10 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['rRNA_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['rRNA_rate'] = {
-                'title': 'rRNA rate',
-                'description': '% alignments to rRNA',
+                'title': 'rRNA pct',
+                'description': '% alignments to rRNA. Depending on the library preparation methods used, the proportion '
+                               'of rRNA sequences should be quite low. If large proportions of rRNA sequences are seen, '
+                               'it is wise to consider if the depth of the remaining sequences is sufficient for further analyses.',
                 'max': 100,
                 'min': 0,
                 'modify': lambda x: x * 100,
@@ -253,43 +255,9 @@ class MultiqcModule(BaseMultiqcModule):
         if len(headers.keys()):
             self.general_stats_addcols(self.bcbio_data, headers)
 
-    def add_general_stats(self, data):
-        genome_info = data.get('genome_info')  # {name, size}
-        coverage_bed_info = data.get('coverage_bed_info')
-        variants_regions_info = data.get('variants_regions_info')
-
-        def _format_bed_info(name, d):
-            bed, size, regions, genes = d['bed'], _format_decimal(d.get('size')), _format_decimal(d.get('regions')), _format_decimal(d.get('genes'))
-            html = '<b>{name}:</b> {bed}'
-            if size is not None:
-                percent = (100.0 * d['size'] / genome_info['size']) if genome_info.get('size') else 0
-                html += ' ({size} bp'
-                if percent >= 0.01:
-                    html += ' or {percent:.2f}% of the genome'
-                if regions is not None:
-                    html += ', {regions} region' + ('s' if d.get('regions') != 1 else '')
-                if genes is not None:
-                    html += ', {genes} gene' + ('s' if d.get('genes') != 1 else '')
-                html += ')'
-            return html.format(**locals())
-
-        if genome_info:
-            self.intro += '<b>Genome:</b> ' + genome_info['name'] + ', ' + _format_decimal(genome_info['size'], 'bp') + '<br>'
-
-            if coverage_bed_info and coverage_bed_info['bed'] == variants_regions_info['bed']:
-                self.intro += _format_bed_info('Target for variant calling and coverage metrics', variants_regions_info)
-            else:
-                if coverage_bed_info:
-                    self.intro += _format_bed_info('Target for coverage metrics', coverage_bed_info) + '<br>'
-                self.intro += _format_bed_info('Target for variant calling', variants_regions_info)
-            # if data.get('coverage_interval'):
-            #     self.intro += ', <b>coverage interval</b>: ' + data.get('coverage_interval')
-            self.intro += '<br>'
-
     def bcbio_coverage_chart(self, names):
         """ Make the bcbio assignment rates plot """
 
-        bcbio_data = []
         parsed_data = defaultdict(dict)
         seen = set()
         for f in self.find_log_files(names):
@@ -297,48 +265,40 @@ class MultiqcModule(BaseMultiqcModule):
             for line in f['f'].split("\n"):
                 if not line.startswith("percent"):
                     continue
-                fields = line.split("\t")
-                x = 100 - float(fields[1])
-                y = float(fields[2])
-                if s_name not in parsed_data[fields[0]]:
-                    parsed_data[fields[0]][s_name] = []
-                parsed_data[fields[0]][s_name].append((x, y))
+                cutoff_reads, region_pct, bases_pct, sample = line.split("\t")
+                x = 100 - float(region_pct)
+                y = float(bases_pct)
+                if s_name not in parsed_data[cutoff_reads]:
+                    parsed_data[cutoff_reads][s_name] = []
+                parsed_data[cutoff_reads][s_name].append((x, y))
                 seen.add(s_name)
             if s_name in seen:
                 self.add_data_source(f)
-        for ipct in [1, 5, 10, 20, 40, 50, 60, 70, 80, 100]:
-            pct = "percentage%s" % ipct
-            data_obj = {}
-            for s in parsed_data[pct]:
-                data_obj.update({s: dict(parsed_data[pct][s])})
-            bcbio_data.append(data_obj)
 
-        # Config for the plot
-        config = {
+        bcbio_data = []
+        cutoffs = []
+        for pct_key in sorted(parsed_data.keys(), key=lambda k: int(k.split("percentage")[1])):
+            if any(any(v > 0 for v in dict(d).values()) for d in parsed_data[pct_key].values()):
+                data_obj = {}
+                for s in parsed_data[pct_key]:
+                    data_obj.update({s: dict(parsed_data[pct_key][s])})
+                bcbio_data.append(data_obj)
+                cutoffs.append(int(pct_key.split("percentage")[1]))
+
+        if bcbio_data and bcbio_data[0] and cutoffs:
+            return linegraph(self, bcbio_data, {
                 'data_labels': [
-                    {'name': 'cutoff 1 nts'},
-                    {'name': 'cutoff 5 nts'},
-                    {'name': 'cutoff 10 nts'},
-                    {'name': 'cutoff 20 nts'},
-                    {'name': 'cutoff 40 nts'},
-                    {'name': 'cutoff 50 nts'},
-                    {'name': 'cutoff 60 nts'},
-                    {'name': 'cutoff 70 nts'},
-                    {'name': 'cutoff 80 nts'},
-                    {'name': 'cutoff 100 nts'},
-                    ],
-            'id': 'bcbio_coverage_plot',
-            'title': 'completeness',
-            'ylab': '% nts in the regions covered',
-            'xlab': '% regions',
-            'ymin': 0,
-            'ymax': 100,
-        }
+                    {'name': str(c) + 'x'} for c in cutoffs
+                ],
+                'id': 'bcbio_coverage_plot',
+                'title': 'Completeness',
+                'xlab': '% regions',
+                'ylab': '% bases in the regions covered',
+                'ymin': 0,
+                'ymax': 100,
+            })
 
-        if bcbio_data[0]:
-            return linegraph(self, bcbio_data, config)
-
-    def bcbio_coverage_avg_chart (self, names) :
+    def bcbio_coverage_avg_chart(self, names):
         """ Make the bcbio assignment rates plot """
 
         bcbio_data = list()
@@ -348,9 +308,9 @@ class MultiqcModule(BaseMultiqcModule):
             for line in f['f'].split("\n"):
                 if not line.startswith("percentage"):
                     continue
-                fields = line.split("\t")
-                y = float(fields[1])
-                x = float(fields[0].replace("percentage", ""))
+                cutoff_reads, bases_pct, sample = line.split("\t")
+                y = float(bases_pct)
+                x = float(cutoff_reads.replace("percentage", ""))
                 parsed_data_depth[s_name][x] = y
 
             if s_name in parsed_data_depth:
@@ -358,14 +318,11 @@ class MultiqcModule(BaseMultiqcModule):
 
         bcbio_data.append(parsed_data_depth)
 
-        # Config for the plot
-        config = {
-                'xlab': "number of reads",
-                'ylab': "pct of region covevered"
-        }
-
         if bcbio_data[0]:
-            return linegraph(self, bcbio_data, config)
+            return linegraph(self, bcbio_data, {
+                'xlab': "number of reads",
+                'ylab': '% bases in the regions covered',
+            })
 
     def bcbio_umi_stats(self, names):
         """Prepare table of statistics on UMIs in the file.
@@ -416,10 +373,9 @@ class MultiqcModule(BaseMultiqcModule):
                 'anchor': 'umi-stats',
                 'content': plots.table.plot(parsed_data, keys)}
 
-    def bcbio_variants_stats(self, names) :
+    def bcbio_variants_stats(self, names):
         """ Parsing stats from VCF files """
 
-        bcbio_data = list()
         parsed_data = defaultdict(dict)
         for f in self.find_log_files(names):
             with open(os.path.join(f['root'], f['fn'])) as in_handle:
@@ -488,7 +444,7 @@ class MultiqcModule(BaseMultiqcModule):
         if bcbio_data[0]:
             return linegraph(self, bcbio_data, config)
 
-    def bcbio_qsignature_chart (self, names) :
+    def bcbio_qsignature_chart(self, names) :
         """ Make the bcbio assignment rates plot """
 
         hmdata = list()
@@ -520,6 +476,10 @@ def _get_disambiguited(dt):
             if k.startswith("Disambiguated"):
                 h[k] = {
                     'title': k.replace("_", " ").replace("Disambiguated", "Disamb."),
+                    'description': 'When samples are at risk of cross-species contamination (e.g. those '
+                                   'derived from PDXs), an attempt is performed to remove reads that are '
+                                   'assigned to the different species involved. This metric shows the number '
+                                   'of removed reads.',
                     'min': 0,
                     'format': '{:.0f}',
                     'shared_key': 'read_count',
@@ -528,10 +488,47 @@ def _get_disambiguited(dt):
     return h
 
 
+def add_project_info(data):
+    genome_info = data.get('genome_info')  # {name, size}
+    coverage_bed_info = data.get('coverage_bed_info')
+    variants_regions_info = data.get('variants_regions_info')
+
+    if genome_info:
+        config.report_header_info = []
+        config.report_header_info.append({"Genome:": genome_info['name'] + ', ' + _format_decimal(genome_info['size'], 'bp')})
+        if coverage_bed_info and coverage_bed_info['bed'] == variants_regions_info['bed']:
+            config.report_header_info.append({"Target:": _format_bed_info(variants_regions_info, genome_info)})
+        else:
+            if coverage_bed_info:
+                config.report_header_info.append({"Target for coverage:": _format_bed_info(coverage_bed_info, genome_info)})
+            if variants_regions_info and variants_regions_info['bed']:
+                config.report_header_info.append({"Target for var. calling:": _format_bed_info(variants_regions_info, genome_info)})
+
+
+def _format_bed_info(d, genome_info):
+    bed, size, regions, genes = d['bed'], \
+                                _format_decimal(d.get('size')), \
+                                _format_decimal(d.get('regions')),\
+                                _format_decimal(d.get('genes'))
+    bed_name = os.path.basename(bed)
+    html = '<a href={bed}>{bed_name}</a>'
+    if size is not None:
+        percent = (100.0 * d['size'] / genome_info['size']) if genome_info.get('size') else 0
+        html += ' ({size} bp'
+        if percent >= 0.01:
+            html += ' or {percent:.2f}% of the genome'
+        if regions is not None:
+            html += ', {regions} region' + ('s' if d.get('regions') != 1 else '')
+        if genes is not None:
+            html += ', {genes} gene' + ('s' if d.get('genes') != 1 else '')
+        html += ')'
+    return html.format(**locals())
+
+
 def _format_decimal(value, unit=None):
     if value is None:
         return None
-    unit_str = ('<span style="font-size: 50%; line-height: 1; ">&nbsp;</span>' + unit) if unit else ''
+    unit_str = ('<span style="font-size: 50%; line-height: 1;">&nbsp;</span>' + unit) if unit else ''
     if value <= 9999:
         return '{value}{unit_str}'.format(**locals())
     else:
