@@ -285,7 +285,7 @@ class MultiqcModule(BaseMultiqcModule):
                 bcbio_data.append(data_obj)
                 cutoffs.append(int(pct_key.split("percentage")[1]))
 
-        if bcbio_data[0] and cutoffs:
+        if bcbio_data and bcbio_data[0] and cutoffs:
             return linegraph(self, bcbio_data, {
                 'data_labels': [
                     {'name': str(c) + 'x'} for c in cutoffs
@@ -501,7 +501,8 @@ def add_project_info(data):
         else:
             if coverage_bed_info:
                 config.report_header_info.append({"Target for coverage:": _format_bed_info(coverage_bed_info, genome_info)})
-            config.report_header_info.append({"Target for var. calling:": _format_bed_info(variants_regions_info, genome_info)})
+            if variants_regions_info and variants_regions_info['bed']:
+                config.report_header_info.append({"Target for var. calling:": _format_bed_info(variants_regions_info, genome_info)})
 
 
 def _format_bed_info(d, genome_info):
