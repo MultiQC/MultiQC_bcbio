@@ -147,7 +147,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Total_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Total_reads'] = {
                 'title': 'Reads',
-                'description': 'Total sequences in the bam file',
+                'description': 'Total sequences in the bam file (exluding secondary alignments)',
                 'min': 0,
                 'modify': lambda x: x / 1000000,
                 'shared_key': 'read_count',
@@ -156,7 +156,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Mapped_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads'] = {
                 'title': 'Mapped',
-                'description': 'Mapped reads number',
+                'description': 'Mapped (both mates, primary) reads number',
                 'min': 0,
                 'modify': lambda x: x / 1000000,
                 'shared_key': 'read_count',
@@ -166,7 +166,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Mapped_reads_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads_pct'] = {
                 'title': '% Aln',
-                'description': '% Mapped reads',
+                'description': '% Mapped reads (both mates, primary)',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
                 'format': '{:.1f}%',
@@ -174,7 +174,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Duplicates_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Duplicates_pct'] = {
                 'title': '% Dup',
-                'description': '% Duplicated mapped reads',
+                'description': '% Duplicated reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
                 'format': '{:.1f}%'
@@ -182,7 +182,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Ontarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Ontarget_pct'] = {
                 'title': '% On-trg',
-                'description': '% On-target mapped not-duplicate reads',
+                'description': '% On-target (both mates, primary) mapped not-duplicate reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
                 'format': '{:.1f}%'
