@@ -11,7 +11,8 @@ import re
 from collections import defaultdict
 import yaml
 
-from multiqc import config, BaseMultiqcModule
+from multiqc import config
+from multiqc.modules.base_module import BaseMultiqcModule
 from multiqc import plots
 
 
