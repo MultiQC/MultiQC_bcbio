@@ -12,8 +12,7 @@ import yaml
 
 from multiqc import config
 from multiqc.modules.base_module import BaseMultiqcModule
-from multiqc import plots
-from multiqc.plots import linegraph
+from multiqc.plots import linegraph, table, heatmap
 from multiqc_bcbio import srna
 
 # Initialise the logger
@@ -371,7 +370,7 @@ class MultiqcModule(BaseMultiqcModule):
                                         'format': '{:n}x'}
         return {'name': 'UMI barcode statistics',
                 'anchor': 'umi-stats',
-                'content': plots.table.plot(parsed_data, keys)}
+                'content': table.plot(parsed_data, keys)}
 
     def bcbio_variants_stats(self, names):
         """ Parsing stats from VCF files """
@@ -397,7 +396,7 @@ class MultiqcModule(BaseMultiqcModule):
         if parsed_data:
             return {'name': 'Variant Summary Table (bcftools)',
                     'anchor': 'bcftools-stats',
-                    'content': plots.table.plot(parsed_data, keys)}
+                    'content': table.plot(parsed_data, keys)}
 
     def bcbio_variants_chart (self, names) :
         """ Make the bcbio assignment rates plot """
@@ -465,7 +464,7 @@ class MultiqcModule(BaseMultiqcModule):
                 row.append(data[name][name2])
             hmdata.append(row)
 
-        return plots.heatmap.plot(hmdata, names)
+        return heatmap.plot(hmdata, names)
 
 
 def _get_disambiguited(dt):

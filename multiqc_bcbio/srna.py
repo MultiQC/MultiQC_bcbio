@@ -13,7 +13,7 @@ import yaml
 
 from multiqc import config
 from multiqc.modules.base_module import BaseMultiqcModule
-from multiqc import plots
+from multiqc.plots import bargraph
 
 
 class parse(BaseMultiqcModule):
@@ -62,11 +62,11 @@ class parse(BaseMultiqcModule):
         if mirs_data:
             cnfg = {'ylab': '# of miRNAs'}
             cnfg['title'] = "Number of miRNAs with changes"
-            self.mirs = plots.bargraph.plot(mirs_data, mirs_key, cnfg)
+            self.mirs = bargraph.plot(mirs_data, mirs_key, cnfg)
         if iso_data:
             cnfg = {'ylab': '# of isomiRs'}
             cnfg['title'] = "Number of isomiRs with changes"
-            self.iso = plots.bargraph.plot(iso_data, iso_key, cnfg)
+            self.iso = bargraph.plot(iso_data, iso_key, cnfg)
 
 
 def add_srna_headers(dt):
