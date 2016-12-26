@@ -13,6 +13,7 @@ import yaml
 from multiqc import config
 from multiqc.modules.base_module import BaseMultiqcModule
 from multiqc import plots
+from multiqc.plots import linegraph
 from multiqc_bcbio import srna
 
 # Initialise the logger
@@ -31,9 +32,6 @@ INTRO_VARIANT = """
                     are covered by a givin number of reads or more (x-axis), or b)
                     %of GC content (x-axis).</p>
                 """
-
-def linegraph(self, data, config):
-    return plots.linegraph.plot(data, config)
 
 class MultiqcModule(BaseMultiqcModule):
 
@@ -287,7 +285,7 @@ class MultiqcModule(BaseMultiqcModule):
                 cutoffs.append(int(pct_key.split("percentage")[1]))
 
         if bcbio_data and bcbio_data[0] and cutoffs:
-            return linegraph(self, bcbio_data, {
+            return linegraph.plot(bcbio_data, {
                 'data_labels': [
                     {'name': str(c) + 'x'} for c in cutoffs
                 ],
@@ -320,7 +318,7 @@ class MultiqcModule(BaseMultiqcModule):
                 self.add_data_source(f)
 
         if data:
-            return linegraph(self, data, {
+            return linegraph.plot(data, {
                 "xlab": "number of reads",
                 "ylab": '% bases in the regions covered',
                 "xmax": x_threshold,
@@ -346,7 +344,7 @@ class MultiqcModule(BaseMultiqcModule):
                   "xDecimals": False}
         return {'name': 'UMI count distribution',
                 'anchor': 'umi-stats-counts',
-                'content': linegraph(self, [plot_data], config)}
+                'content': linegraph.plot([plot_data], config)}
 
     def _bcbio_umi_table(self, parsed_data):
         keys = OrderedDict()
@@ -444,7 +442,7 @@ class MultiqcModule(BaseMultiqcModule):
         }
 
         if bcbio_data[0]:
-            return linegraph(self, bcbio_data, config)
+            return linegraph.plot(bcbio_data, config)
 
     def bcbio_qsignature_chart(self, names) :
         """ Make the bcbio assignment rates plot """
