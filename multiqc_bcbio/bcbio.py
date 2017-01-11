@@ -82,10 +82,8 @@ class MultiqcModule(BaseMultiqcModule):
         self.sections = list()
         coverage_plot = self.bcbio_coverage_chart(config.sp['bcbio']['coverage'])
         coverage_avg_plot = self.bcbio_coverage_avg_chart(config.sp['bcbio']['coverage_avg'])
-        variant_plot = self.bcbio_variants_chart(config.sp['bcbio']['variants'])
         qsignature_plot = None # disable plotting for now
         #qsignature_plot = self.bcbio_qsignature_chart(config.sp['bcbio']['qsignature'])
-        variant_stats = self.bcbio_variants_stats(config.sp['bcbio']['vcfstats'])
         umi_stats = self.bcbio_umi_stats(config.sp["bcbio"]["umi"])
 
         if umi_stats:
@@ -98,8 +96,6 @@ class MultiqcModule(BaseMultiqcModule):
             self.sections.append({'name': 'Isomirs stats',
                                   'anchor': 'bcbio-isomirs',
                                   'content': mirna_stats.iso})
-        if variant_stats:
-            self.sections.append(variant_stats)
         if coverage_avg_plot:
             self.sections.append({
                 'name': 'Coverage Profile',
@@ -110,11 +106,6 @@ class MultiqcModule(BaseMultiqcModule):
                 'name': 'Coverage Profile Along Regions',
                 'anchor': 'bcbio-fraction-coverage',
                 'content': INTRO_COVERAGE + coverage_plot})
-        if variant_plot:
-            self.sections.append({
-                'name': 'Variant Profile',
-                'anchor': 'bcbio-fraction-variants',
-                'content': INTRO_VARIANT + variant_plot})
         if qsignature_plot:
             self.sections.append({
                 'name': 'qSignature Profile',
@@ -212,32 +203,6 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Disambiguated_ambiguous_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers.update(_get_disambiguited(self.bcbio_data))
 
-        if any(['Variations_total' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['Variations_total'] = {
-                'title': 'Total Variations',
-                'description': 'Numbers of Total Variations',
-                'min': 0, 'format': '{:.0f}', 'share_key': 'variants'
-            }
-        if any(['Variations_in_dbSNP_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['Variations_in_dbSNP_pct'] = {
-                'title': '% in dbSNP',
-                'description': 'Numbers of Variations in dbSNP',
-                'format': '{:.1f}%',
-                'min': 0,
-                'max': 100
-            }
-        if any(['Variations_heterozygous' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['Variations_heterozygous'] = {
-                'title': 'Variations heterozygous',
-                'description': 'Numbers of Heterozygous Variations',
-                'min': 0, 'format': '{d}', 'share_key': 'variants'
-            }
-        if any(['Variations_alt_homozygous' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers['Variations_alt_homozygous'] = {
-                'title': 'Variations homozygous',
-                'description': 'Numbers of Homozygous Variations',
-                'min': 0, 'format': '{d}', 'share_key': 'variants'
-            }
         if any(['rRNA_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['rRNA_rate'] = {
                 'title': 'rRNA pct',
@@ -371,77 +336,6 @@ class MultiqcModule(BaseMultiqcModule):
         return {'name': 'UMI barcode statistics',
                 'anchor': 'umi-stats',
                 'content': table.plot(parsed_data, keys)}
-
-    def bcbio_variants_stats(self, names):
-        """ Parsing stats from VCF files """
-
-        parsed_data = defaultdict(dict)
-        for f in self.find_log_files(names):
-            with open(os.path.join(f['root'], f['fn'])) as in_handle:
-                parsed_data.update(yaml.safe_load(in_handle))
-        keys = OrderedDict()
-        defaults = {
-                'min': 0,
-                'format': '{d}',
-                'shared_key': 'variants'
-                }
-        keys['Variations (total)'] = dict(defaults, **{'description': 'Total variants detected'})
-        keys['Variations (homozygous)'] = dict(defaults, **{'description': 'Total homozygous variants detected'})
-        keys['Variations (alt homozygous)'] = dict(defaults, **{'description': 'Total alternative homozygous variants detected'})
-        keys['Variations (heterozygous)'] = dict(defaults, **{'description': 'Total heterozygous variants detected'})
-        keys['Variations (SNPs)'] = dict(defaults, **{'description': 'Total SNPs detected'})
-        keys['Variations (indels)'] = dict(defaults, **{'description': 'Total indels detected'})
-        keys['Variations (ts/tv)'] = dict(defaults, **{'description': 'TS/TV ratio'})
-
-        if parsed_data:
-            return {'name': 'Variant Summary Table (bcftools)',
-                    'anchor': 'bcftools-stats',
-                    'content': table.plot(parsed_data, keys)}
-
-    def bcbio_variants_chart (self, names) :
-        """ Make the bcbio assignment rates plot """
-
-        bcbio_data = list()
-        parsed_data_depth = defaultdict(dict)
-        parsed_data_cg = defaultdict(dict)
-        for f in self.find_log_files(names):
-            s_name = self.clean_s_name(f['fn'], root=None)
-            data_cg = defaultdict(float)
-            for line in f['f'].split("\n"):
-                if line.startswith("pct"):
-                    continue
-                fields = line.split("\t")
-                if len(fields) < 3:
-                    continue
-                y = 100 - float(fields[0])
-                x_depth = float(fields[1])
-                x_cg = float(fields[2])
-                parsed_data_depth[s_name][x_depth] = y
-                data_cg[x_cg] = float(fields[0])
-            init_cg = 0
-            for cg in sorted(data_cg, key=data_cg.get):
-                corrected = data_cg[cg] - init_cg
-                init_cg = data_cg[cg]
-                parsed_data_cg[s_name][cg] = corrected
-
-            if s_name in parsed_data_depth:
-                self.add_data_source(f)
-
-        bcbio_data.append(parsed_data_depth)
-        bcbio_data.append(parsed_data_cg)
-
-        # Config for the plot
-        config = {
-                'ylab': 'pct of variants',
-                'xlab': 'number of reads | CG content',
-                'data_labels': [
-                    {'name': 'Variants depth', 'ylab': 'pct of variants', 'xlab': 'number of reads', 'ymax':100},
-                    {'name': 'CG content', 'ymax':100, 'ylab': 'pct of  variants', 'xlab': 'CG conetnt', 'xmin':0, 'xmax':100}
-                    ]
-        }
-
-        if bcbio_data[0]:
-            return linegraph.plot(bcbio_data, config)
 
     def bcbio_qsignature_chart(self, names) :
         """ Make the bcbio assignment rates plot """
