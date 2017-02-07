@@ -85,9 +85,13 @@ class MultiqcModule(BaseMultiqcModule):
         qsignature_plot = None # disable plotting for now
         #qsignature_plot = self.bcbio_qsignature_chart(config.sp['bcbio']['qsignature'])
         umi_stats = self.bcbio_umi_stats(config.sp["bcbio"]["umi"])
-
         if umi_stats:
             self.sections.extend(umi_stats)
+
+        viral_stats = self.get_viral_stats(config.sp["bcbio"]["viral"])
+        if viral_stats:
+            self.sections.append(viral_stats)
+
         if mirna_stats.mirs:
             self.sections.append({'name': 'miRNAs stats',
                                   'anchor': 'bcbio-mirs',
@@ -336,6 +340,25 @@ class MultiqcModule(BaseMultiqcModule):
         return {'name': 'UMI barcode statistics',
                 'anchor': 'umi-stats',
                 'content': table.plot(parsed_data, keys)}
+
+    def get_viral_stats(self, fnames):
+        """Provide counts of top viral hits for samples.
+        """
+        to_show = 5
+        data = {}
+        for f in self.find_log_files(fnames):
+            with open(os.path.join(f['root'], f['fn'])) as in_handle:
+                sample_name = in_handle.readline().strip().split()[-1]
+                counts = []
+                for line in in_handle:
+                    contig, count = line.strip().split("\t")
+                    counts.append((count, contig))
+                counts.sort(reverse=True)
+                data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts[:to_show]])}
+        keys = OrderedDict()
+        keys["counts"] = {"title": "Virus (count)",
+                          "description": "Top %s viral sequences, with counts, found in unmapped reads" % to_show}
+        return {"name": "Viral mapping read counts", "anchor": "viral-counts", "content": table.plot(data, keys)}
 
     def bcbio_qsignature_chart(self, names) :
         """ Make the bcbio assignment rates plot """
