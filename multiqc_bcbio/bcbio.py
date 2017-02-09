@@ -92,6 +92,10 @@ class MultiqcModule(BaseMultiqcModule):
         if viral_stats:
             self.sections.append(viral_stats)
 
+        damage_stats = self.get_damage_stats(config.sp["bcbio"]["damage"])
+        if damage_stats:
+            self.sections.append(damage_stats)
+
         if mirna_stats.mirs:
             self.sections.append({'name': 'miRNAs stats',
                                   'anchor': 'bcbio-mirs',
@@ -354,11 +358,30 @@ class MultiqcModule(BaseMultiqcModule):
                     contig, count = line.strip().split("\t")
                     counts.append((count, contig))
                 counts.sort(reverse=True)
-                data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts[:to_show]])}
+                if counts:
+                    data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts[:to_show]])}
         keys = OrderedDict()
         keys["counts"] = {"title": "Virus (count)",
                           "description": "Top %s viral sequences, with counts, found in unmapped reads" % to_show}
-        return {"name": "Viral mapping read counts", "anchor": "viral-counts", "content": table.plot(data, keys)}
+        if data:
+            return {"name": "Viral mapping read counts", "anchor": "viral-counts", "content": table.plot(data, keys)}
+
+    def get_damage_stats(self, fnames):
+        """Summarize statistics on samples with DNA damage.
+        """
+        data = {}
+        keys = set([])
+        for f in self.find_log_files(fnames):
+            with open(os.path.join(f['root'], f['fn'])) as in_handle:
+                cur = yaml.safe_load(in_handle)
+                keys = keys | set(cur["changes"].keys())
+                data[cur["sample"]] = cur["changes"]
+        if data:
+            cols = OrderedDict()
+            for k in sorted(list(keys), reverse=True):
+                cols[k] = {"title": k, "format": "{:n}"}
+            return {"name": "DNA damage and bias filtering", "anchor": "damage-stats",
+                    "content": table.plot(data, cols)}
 
     def bcbio_qsignature_chart(self, names) :
         """ Make the bcbio assignment rates plot """

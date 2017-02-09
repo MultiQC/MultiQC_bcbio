@@ -15,6 +15,7 @@ config.sp['bcbio'] = {'metrics': {'fn': '*_bcbio.txt'},
                       'seqbuster': {'contents': 'seqbuster'},
                       'umi': {'fn': '*_umi_stats.yaml'},
                       'viral': {'fn': '*viral*-counts.txt'},
+                      'damage': {'fn': '*damage.yaml'},
                       }
 
 config.fn_clean_exts.append({'type': 'regex', 'pattern': '_bcbio.*'})
