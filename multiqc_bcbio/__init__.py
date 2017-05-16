@@ -4,22 +4,26 @@ from distutils.version import StrictVersion
 from .bcbio import MultiqcModule
 import multiqc
 from multiqc import config
+from multiqc.utils.config import update_dict
+from multiqc.utils.report import get_filelist
 
-config.sp['bcbio'] = {'metrics': {'fn': '*_bcbio.txt'},
-                      'coverage': {'fn': '*_bcbio_coverage.txt'},
-                      'coverage_avg': {'fn': '*_bcbio_coverage_avg.txt'},
-                      'variants': {'fn': '*_bcbio_variants.txt'},
-                      'target': {'fn': 'target_info.yaml'},
-                      'qsignature': {'fn': '*bcbio_qsignature.ma'},
-                      'vcfstats': {'fn': '*_bcbio_variants_stats.txt'},
-                      'seqbuster': {'contents': 'seqbuster'},
-                      'umi': {'fn': '*_umi_stats.yaml'},
-                      'viral': {'fn': '*viral*-counts.txt'},
-                      'damage': {'fn': '*damage.yaml'},
-                      }
+update_dict(
+    config.sp, {'bcbio/metrics': {'fn': '*_bcbio.txt'},
+                'bcbio/coverage': {'fn': '*_bcbio_coverage.txt'},
+                'bcbio/coverage_avg': {'fn': '*_bcbio_coverage_avg.txt'},
+                'bcbio/variants': {'fn': '*_bcbio_variants.txt'},
+                'bcbio/target': {'fn': 'target_info.yaml'},
+                'bcbio/qsignature': {'fn': '*bcbio_qsignature.ma'},
+                'bcbio/vcfstats': {'fn': '*_bcbio_variants_stats.txt'},
+                'bcbio/seqbuster': {'contents': 'seqbuster'},
+                'bcbio/umi': {'fn': '*_umi_stats.yaml'},
+                'bcbio/viral': {'fn': '*viral*-counts.txt'},
+                'bcbio/damage': {'fn': '*damage.yaml'},
+                })
+
 
 config.fn_clean_exts.append({'type': 'regex', 'pattern': '_bcbio.*'})
-
+get_filelist()
 
 
 for module, value_dict in {
