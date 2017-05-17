@@ -46,7 +46,7 @@ class MultiqcModule(BaseMultiqcModule):
 
         # Find and load any bcbio reports
         self.bcbio_data = dict()
-        for f in self.find_log_files(config.sp['bcbio']['metrics']):
+        for f in self.find_log_files('bcbio/metrics'):
             parsed_data = self.parse_bcbio_report(f['f'])
             if parsed_data is not None:
                 s_name = self.clean_s_name(f['fn'], root=None)
@@ -72,53 +72,55 @@ class MultiqcModule(BaseMultiqcModule):
         self.metrics_stats_table()
 
         # General target stats
-        target_infos = list(self.find_log_files(config.sp['bcbio']['target']))
+        target_infos = list(self.find_log_files('bcbio/target'))
         if len(target_infos) == 1:
             add_project_info(yaml.load(target_infos[0]['f']))
 
         # Coverage plot
         # Only one section, so add to the intro
 
-        self.sections = list()
-        coverage_plot = self.bcbio_coverage_chart(config.sp['bcbio']['coverage'])
-        coverage_avg_plot = self.bcbio_coverage_avg_chart(config.sp['bcbio']['coverage_avg'])
+        coverage_plot = self.bcbio_coverage_chart('bcbio/coverage')
+        coverage_avg_plot = self.bcbio_coverage_avg_chart('bcbio/coverage_avg')
         qsignature_plot = None # disable plotting for now
-        #qsignature_plot = self.bcbio_qsignature_chart(config.sp['bcbio']['qsignature'])
-        umi_stats = self.bcbio_umi_stats(config.sp["bcbio"]["umi"])
-        if umi_stats:
-            self.sections.extend(umi_stats)
+        #qsignature_plot = self.bcbio_qsignature_chart('bcbio/qsignature')
+        for umi_section in self.bcbio_umi_stats("bcbio/umi"):
+            self.add_section(**umi_section)
 
-        viral_stats = self.get_viral_stats(config.sp["bcbio"]["viral"])
+        viral_stats = self.get_viral_stats("bcbio/viral")
         if viral_stats:
-            self.sections.append(viral_stats)
+            self.add_section(**viral_stats)
 
-        damage_stats = self.get_damage_stats(config.sp["bcbio"]["damage"])
+        damage_stats = self.get_damage_stats("bcbio/damage")
         if damage_stats:
-            self.sections.append(damage_stats)
+            self.add_section(**damage_stats)
 
         if mirna_stats.mirs:
-            self.sections.append({'name': 'miRNAs stats',
-                                  'anchor': 'bcbio-mirs',
-                                  'content': mirna_stats.mirs})
+            self.add_section(
+                name='miRNAs stats',
+                anchor='bcbio-mirs',
+                plot=mirna_stats.mirs)
         if mirna_stats.iso:
-            self.sections.append({'name': 'Isomirs stats',
-                                  'anchor': 'bcbio-isomirs',
-                                  'content': mirna_stats.iso})
+            self.add_section(
+                name='Isomirs stats',
+                anchor='bcbio-isomirs',
+                plot=mirna_stats.iso)
         if coverage_avg_plot:
-            self.sections.append({
-                'name': 'Coverage Profile',
-                'anchor': 'bcbio-fraction-coverage-all',
-                'content': INTRO_COVERAGE_AVG + coverage_avg_plot})
+            self.add_section(
+                name='Coverage Profile',
+                anchor='bcbio-fraction-coverage-all',
+                description=INTRO_COVERAGE_AVG,
+                plot=coverage_avg_plot)
         if coverage_plot:
-            self.sections.append({
-                'name': 'Coverage Profile Along Regions',
-                'anchor': 'bcbio-fraction-coverage',
-                'content': INTRO_COVERAGE + coverage_plot})
+            self.add_section(
+                name='Coverage Profile Along Regions',
+                anchor='bcbio-fraction-coverage',
+                description=INTRO_COVERAGE,
+                plot=coverage_plot)
         if qsignature_plot:
-            self.sections.append({
-                'name': 'qSignature Profile',
-                'anchor': 'bcbio-fraction-qsignature',
-                'content': qsignature_plot})
+            self.add_section(
+                name='qSignature Profile',
+                anchor='bcbio-fraction-qsignature',
+                plot=qsignature_plot)
 
     def parse_bcbio_report(self, raw_data):
         """ Parse the bcbio log file. """
@@ -139,34 +141,40 @@ class MultiqcModule(BaseMultiqcModule):
         basic stats table at the top of the report """
 
         headers = OrderedDict()
-        headers.update(srna.add_srna_headers(self.bcbio_data))
+
+        try:
+            from multiqc_bcbio import srna
+        except ImportError:
+            log.error("Cannot import MultiQC_bcbio sRNA.")
+        else:
+            headers.update(srna.add_srna_headers(self.bcbio_data))
 
         if any(['Total_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Total_reads'] = {
                 'title': 'Reads',
-                'description': 'Total sequences in the bam file (exluding secondary alignments)',
+                'description': 'Total raw sequences ({})'.format(config.read_count_desc),
                 'min': 0,
-                'modify': lambda x: x / 1000000,
+                'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
-                'format': '{:.2f} M',
+                'format': '{:,.2f} ' + config.read_count_prefix,
             }
         if any(['Mapped_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads'] = {
-                'title': 'Mapped',
-                'description': 'Mapped (both mates, primary) reads number',
+                'title': 'Aln',
+                'description': 'Total number of read alignments ({})'.format(config.read_count_desc),
                 'min': 0,
-                'modify': lambda x: x / 1000000,
+                'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
-                'format': '{:.2f} M',
+                'format': '{:,.2f} ' + config.read_count_prefix,
                 'hidden': True,
             }
         if any(['Mapped_reads_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads_pct'] = {
-                'title': '% Aln',
-                'description': '% Mapped reads (both mates, primary)',
+                'title': '% Map',
+                'description': '% Mapped reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
-                'format': '{:.1f}%',
+                'format': '{:,.1f}',
             }
         if any(['Duplicates_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Duplicates_pct'] = {
@@ -174,7 +182,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'description': '% Duplicated reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
-                'format': '{:.1f}%'
+                'format': '{:,.1f}'
             }
         if any(['Ontarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Ontarget_pct'] = {
@@ -182,7 +190,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'description': '% On-target (both mates, primary) mapped not-duplicate reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
-                'format': '{:.1f}%'
+                'format': '{:,.1f}'
             }
         if any(['Ontarget_padded_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Ontarget_padded_pct'] = {
@@ -190,7 +198,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'description': '% Reads that overlap target regions extended by 200 bp. Expected to be 1-2% higher.',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
-                'format': '{:.1f}%',
+                'format': '{:,.1f}',
                 'hidden': True,
             }
         if any(['Usable_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
@@ -199,13 +207,13 @@ class MultiqcModule(BaseMultiqcModule):
                 'description': '% Unique reads mapped on target in the total number of original reads.',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
-                'format': '{:.1f}%'
+                'format': '{:,.1f}'
             }
         if any(['Avg_coverage' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Avg_coverage'] = {
                 'title': 'Depth',
                 'description': 'Average target read coverage',
-                'format': '{:.2f}',
+                'format': '{:,.2f}',
             }
 
         if any(['Disambiguated_ambiguous_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
@@ -221,7 +229,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'min': 0,
                 'modify': lambda x: x * 100,
                 'scale': 'RdYlGn',
-                'format': '{:.1f}%'
+                'format': '{:,.1f}'
             }
         if len(headers.keys()):
             self.general_stats_addcols(self.bcbio_data, headers)
@@ -307,6 +315,7 @@ class MultiqcModule(BaseMultiqcModule):
             umi_table = self._bcbio_umi_table(parsed_data)
             umi_count_plot = self._bcbio_umi_count_plot(parsed_data)
             return [umi_table, umi_count_plot]
+        return []
 
     def _bcbio_umi_count_plot(self, parsed_data):
         plot_data = {}
@@ -316,7 +325,7 @@ class MultiqcModule(BaseMultiqcModule):
                   "xDecimals": False}
         return {'name': 'UMI count distribution',
                 'anchor': 'umi-stats-counts',
-                'content': linegraph.plot([plot_data], config)}
+                'plot': linegraph.plot([plot_data], config)}
 
     def _bcbio_umi_table(self, parsed_data):
         keys = OrderedDict()
@@ -324,26 +333,30 @@ class MultiqcModule(BaseMultiqcModule):
                                         'description': 'Count of UMI consensus reads mapped',
                                         'format': '{:n}'}
         keys['umi_consensus_pct'] = {'title': 'Consensus reduction',
-                                        'description': 'Percent of original reads removed by consensus',
-                                        'format': '{:.1f}%'}
+                                     'description': 'Percent of original reads removed by consensus',
+                                     'suffix': '%',
+                                     'format': '{:,.1f}'}
         keys['umi_baseline_mapped'] = {'title': "Original mapped",
-                                        'description': 'Count of original mapped reads',
-                                        'format': '{:n}'}
+                                       'description': 'Count of original mapped reads',
+                                       'format': '{:n}'}
         keys['umi_baseline_duplicate_pct'] = {'title': 'Original duplicates',
-                                                'description': 'Percentage original duplicates',
-                                                'format': '{:.1f}%'}
+                                              'description': 'Percentage original duplicates',
+                                              'suffix': '%',
+                                              'format': '{:,.1f}'}
         keys['umi_baseline_all'] = {'title': 'Original total',
                                     'description': 'Total reads in the original BAM',
                                     'format': '{:n}'}
         keys['umi_reduction_median'] = {'title': 'Duplicate reduction (median)',
                                         'description': 'Reduction in duplicates per position by UMIs (median)',
-                                        'format': '{:n}x'}
+                                        'suffix': 'x',
+                                        'format': '{:n}'}
         keys['umi_reduction_max'] = {'title': 'Duplicate reduction (max)',
-                                        'description': 'Reduction in duplicates per position by UMIs (maximum)',
-                                        'format': '{:n}x'}
+                                     'description': 'Reduction in duplicates per position by UMIs (maximum)',
+                                     'suffix': 'x',
+                                     'format': '{:n}'}
         return {'name': 'UMI barcode statistics',
                 'anchor': 'umi-stats',
-                'content': table.plot(parsed_data, keys)}
+                'plot': table.plot(parsed_data, keys)}
 
     def get_viral_stats(self, fnames):
         """Provide counts of top viral hits for samples.
@@ -364,7 +377,9 @@ class MultiqcModule(BaseMultiqcModule):
         keys["counts"] = {"title": "Virus (count)",
                           "description": "Top %s viral sequences, with counts, found in unmapped reads" % to_show}
         if data:
-            return {"name": "Viral mapping read counts", "anchor": "viral-counts", "content": table.plot(data, keys)}
+            return {"name": "Viral mapping read counts",
+                    "anchor": "viral-counts",
+                    "plot": table.plot(data, keys)}
 
     def get_damage_stats(self, fnames):
         """Summarize statistics on samples with DNA damage.
@@ -380,8 +395,9 @@ class MultiqcModule(BaseMultiqcModule):
             cols = OrderedDict()
             for k in sorted(list(keys), reverse=True):
                 cols[k] = {"title": k, "format": "{:n}"}
-            return {"name": "DNA damage and bias filtering", "anchor": "damage-stats",
-                    "content": table.plot(data, cols)}
+            return {"name": "DNA damage and bias filtering",
+                    "anchor": "damage-stats",
+                    "plot": table.plot(data, cols)}
 
     def bcbio_qsignature_chart(self, names) :
         """ Make the bcbio assignment rates plot """

@@ -32,6 +32,9 @@ setup(
         'multiqc.modules.v1': [
             'bcbio = multiqc_bcbio.bcbio:MultiqcModule',
         ],
+        'multiqc.hooks.v1': [
+            'before_config = multiqc_bcbio:multiqc_bcbio_config',
+        ]
     },
     classifiers = [
         'Development Status :: 4 - Beta',

@@ -26,7 +26,7 @@ class parse(BaseMultiqcModule):
 
     def bcbio_general_stats(self):
         bcbio_data = list()
-        fns = self.find_log_files(config.sp['bcbio']['seqbuster'])
+        fns = self.find_log_files('bcbio/seqbuster')
         data = defaultdict(dict)
         for f in fns:
             s_name = self.clean_s_name(f['fn'], root=None)
@@ -41,7 +41,7 @@ class parse(BaseMultiqcModule):
 
     def bcbio_mirna_stats(self):
         bcbio_data = list()
-        fns = self.find_log_files(config.sp['bcbio']['seqbuster'])
+        fns = self.find_log_files('bcbio/seqbuster')
         mirs_data = defaultdict(dict)
         mirs_key = OrderedDict()
         iso_data = defaultdict(dict)
