@@ -98,27 +98,29 @@ class MultiqcModule(BaseMultiqcModule):
             self.add_section(
                 name='miRNAs stats',
                 anchor='bcbio-mirs',
-                content=mirna_stats.mirs)
+                plot=mirna_stats.mirs)
         if mirna_stats.iso:
             self.add_section(
                 name='Isomirs stats',
                 anchor='bcbio-isomirs',
-                content=mirna_stats.iso)
+                plot=mirna_stats.iso)
         if coverage_avg_plot:
             self.add_section(
                 name='Coverage Profile',
                 anchor='bcbio-fraction-coverage-all',
-                content=INTRO_COVERAGE_AVG + coverage_avg_plot)
+                description=INTRO_COVERAGE_AVG,
+                plot=coverage_avg_plot)
         if coverage_plot:
             self.add_section(
                 name='Coverage Profile Along Regions',
                 anchor='bcbio-fraction-coverage',
-                content=INTRO_COVERAGE + coverage_plot)
+                description=INTRO_COVERAGE,
+                plot=coverage_plot)
         if qsignature_plot:
             self.add_section(
                 name='qSignature Profile',
                 anchor='bcbio-fraction-qsignature',
-                content=qsignature_plot)
+                plot=qsignature_plot)
 
     def parse_bcbio_report(self, raw_data):
         """ Parse the bcbio log file. """
@@ -323,7 +325,7 @@ class MultiqcModule(BaseMultiqcModule):
                   "xDecimals": False}
         return {'name': 'UMI count distribution',
                 'anchor': 'umi-stats-counts',
-                'content': linegraph.plot([plot_data], config)}
+                'plot': linegraph.plot([plot_data], config)}
 
     def _bcbio_umi_table(self, parsed_data):
         keys = OrderedDict()
@@ -350,7 +352,7 @@ class MultiqcModule(BaseMultiqcModule):
                                      'format': '{:n}x'}
         return {'name': 'UMI barcode statistics',
                 'anchor': 'umi-stats',
-                'content': table.plot(parsed_data, keys)}
+                'plot': table.plot(parsed_data, keys)}
 
     def get_viral_stats(self, fnames):
         """Provide counts of top viral hits for samples.
@@ -373,7 +375,7 @@ class MultiqcModule(BaseMultiqcModule):
         if data:
             return {"name": "Viral mapping read counts",
                     "anchor": "viral-counts",
-                    "content": table.plot(data, keys)}
+                    "plot": table.plot(data, keys)}
 
     def get_damage_stats(self, fnames):
         """Summarize statistics on samples with DNA damage.
@@ -391,7 +393,7 @@ class MultiqcModule(BaseMultiqcModule):
                 cols[k] = {"title": k, "format": "{:n}"}
             return {"name": "DNA damage and bias filtering",
                     "anchor": "damage-stats",
-                    "content": table.plot(data, cols)}
+                    "plot": table.plot(data, cols)}
 
     def bcbio_qsignature_chart(self, names) :
         """ Make the bcbio assignment rates plot """
