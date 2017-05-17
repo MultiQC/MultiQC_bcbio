@@ -334,22 +334,26 @@ class MultiqcModule(BaseMultiqcModule):
                                         'format': '{:n}'}
         keys['umi_consensus_pct'] = {'title': 'Consensus reduction',
                                      'description': 'Percent of original reads removed by consensus',
-                                     'format': '{:,.1f}%'}
+                                     'suffix': '%',
+                                     'format': '{:,.1f}'}
         keys['umi_baseline_mapped'] = {'title': "Original mapped",
                                        'description': 'Count of original mapped reads',
                                        'format': '{:n}'}
         keys['umi_baseline_duplicate_pct'] = {'title': 'Original duplicates',
                                               'description': 'Percentage original duplicates',
-                                              'format': '{:,.1f}%'}
+                                              'suffix': '%',
+                                              'format': '{:,.1f}'}
         keys['umi_baseline_all'] = {'title': 'Original total',
                                     'description': 'Total reads in the original BAM',
                                     'format': '{:n}'}
         keys['umi_reduction_median'] = {'title': 'Duplicate reduction (median)',
                                         'description': 'Reduction in duplicates per position by UMIs (median)',
-                                        'format': '{:n}x'}
+                                        'suffix': 'x',
+                                        'format': '{:n}'}
         keys['umi_reduction_max'] = {'title': 'Duplicate reduction (max)',
                                      'description': 'Reduction in duplicates per position by UMIs (maximum)',
-                                     'format': '{:n}x'}
+                                     'suffix': 'x',
+                                     'format': '{:n}'}
         return {'name': 'UMI barcode statistics',
                 'anchor': 'umi-stats',
                 'plot': table.plot(parsed_data, keys)}
