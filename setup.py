@@ -14,7 +14,7 @@ version = '0.2.0dev'
 setup(
     name = 'multiqc_bcbio',
     version = version,
-    author = 'Lorena Pantano',
+    author = 'Lorena Pantano, Brad Chapman , Vlad Saveliev, Phil Ewels',
     author_email = 'lpantano@iscb.org',
     description = "MultiQC plugin for bcbio_nextgen pipeline",
     long_description = __doc__,
