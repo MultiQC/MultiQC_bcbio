@@ -148,31 +148,39 @@ class MultiqcModule(BaseMultiqcModule):
             log.error("Cannot import MultiQC_bcbio sRNA.")
         else:
             headers.update(srna.add_srna_headers(self.bcbio_data))
-
+        
+        read_format = '{:,.2f} ' + config.read_count_prefix
+        if config.read_count_multiplier == 1:
+            read_format = '{:,.0f}'
+            
         if any(['Total_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Total_reads'] = {
                 'title': 'Reads',
-                'description': 'Total raw sequences ({})'.format(config.read_count_desc),
+                'description': 'Total raw sequences' +
+                               (' ({})' + str(config.read_count_desc) if config.read_count_desc else ''),
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
-                'format': '{:,.2f} ' + config.read_count_prefix,
+                'format': read_format,
             }
         if any(['Mapped_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads'] = {
                 'title': 'Aln',
-                'description': 'Total number of read alignments ({})'.format(config.read_count_desc),
+                'description': 'Total number of read alignments' +
+                               (' ({})' + str(config.read_count_desc) if config.read_count_desc else ''),
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
-                'format': '{:,.2f} ' + config.read_count_prefix,
+                'format': read_format,
                 'hidden': True,
             }
         if any(['Mapped_reads_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads_pct'] = {
                 'title': '% Map',
                 'description': '% Mapped reads',
-                'min': 0, 'max': 100, 'suffix': '%',
+                'min': 0,
+                'max': 100,
+                'suffix': '%',
                 'scale': 'RdYlGn',
                 'format': '{:,.1f}',
             }
