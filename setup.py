@@ -9,7 +9,7 @@ For more information about MultiQC, see http://multiqc.info
 
 from setuptools import setup, find_packages
 
-version = '0.2.0dev'
+version = '0.2.0'
 
 setup(
     name = 'multiqc_bcbio',
@@ -26,7 +26,7 @@ setup(
     include_package_data = True,
     zip_safe=False,
     install_requires = [
-        'multiqc',
+        'multiqc>=1.0',
     ],
     entry_points = {
         'multiqc.modules.v1': [
