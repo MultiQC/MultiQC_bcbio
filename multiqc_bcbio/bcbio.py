@@ -215,7 +215,13 @@ class MultiqcModule(BaseMultiqcModule):
                 'description': 'Average target read coverage',
                 'format': '{:,.2f}',
             }
-
+        if any(['Average_insert_size' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['Average_insert_size'] = {
+                'title': 'Insert Size',
+                'description': 'Average insert size',
+                'suffix': 'bp',
+                'format': '{:.0f}',
+            }
         if any(['Disambiguated_ambiguous_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers.update(_get_disambiguited(self.bcbio_data))
 
