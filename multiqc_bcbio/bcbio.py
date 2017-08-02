@@ -16,7 +16,7 @@ from multiqc.plots import linegraph, table, heatmap
 from multiqc_bcbio import srna
 
 # Initialise the logger
-log = logging.getLogger(__name__)
+log = logging.getLogger('multiqc.multiqc_bcbio')
 
 INTRO_COVERAGE = """
                     <p>This section shows the percentage of regions with a certain
