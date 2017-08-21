@@ -157,7 +157,7 @@ class MultiqcModule(BaseMultiqcModule):
             headers['Total_reads'] = {
                 'title': 'Reads',
                 'description': 'Total raw sequences' +
-                               (' ({})' + str(config.read_count_desc) if config.read_count_desc else ''),
+                               (' ({})'.format(config.read_count_desc) if config.read_count_desc else ''),
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
@@ -167,7 +167,7 @@ class MultiqcModule(BaseMultiqcModule):
             headers['Mapped_reads'] = {
                 'title': 'Aln',
                 'description': 'Total number of read alignments' +
-                               (' ({})' + str(config.read_count_desc) if config.read_count_desc else ''),
+                               (' ({})'.format(config.read_count_desc) if config.read_count_desc else ''),
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',

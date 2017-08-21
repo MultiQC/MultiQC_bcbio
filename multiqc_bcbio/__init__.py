@@ -37,5 +37,22 @@ def multiqc_bcbio_config():
             'reads_mapped': False,
             'reads_mapped_percent': False,
             'raw_total_sequences': False,
-        }
+            'error_rate': False,
+        },
+        'SnpEff': {
+            'Change_rate': False,
+            'Ts_Tv_ratio': False,
+            'Number_of_variants_before_filter': False,
+        },
     })
+    config.module_order = [
+        "bcbio",
+        "samtools",
+        "goleft_indexcov",
+        "bcftools",
+        "picard",
+        "qualimap",
+        "snpeff",
+        "fastqc",
+        "preseq"
+    ]
