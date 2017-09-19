@@ -31,6 +31,7 @@ def multiqc_bcbio_config():
         },
         'QualiMap': {
             'percentage_aligned': False,
+            'median_coverage': False,
         },
         'Samtools Stats': {
             'non-primary_alignments': False,
