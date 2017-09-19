@@ -157,8 +157,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Total_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Total_reads'] = {
                 'title': 'Reads',
-                'description': 'Total raw sequences' +
-                               (' ({})'.format(config.read_count_desc) if config.read_count_desc else ''),
+                'description': 'Total read count in the output BAM file (including unmapped, etc.)',
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
@@ -167,8 +166,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Mapped_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads'] = {
                 'title': 'Aln',
-                'description': 'Total number of read alignments' +
-                               (' ({})'.format(config.read_count_desc) if config.read_count_desc else ''),
+                'description': 'Total number of read alignments',
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
@@ -226,9 +224,8 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Average_insert_size' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Average_insert_size'] = {
-                'title': 'Insert Size',
-                'description': 'Average insert size',
-                'suffix': 'bp',
+                'title': 'Mean IS',
+                'description': 'Mean insert size (samtools stats)',
                 'format': '{:.0f}',
             }
         if any(['Disambiguated_ambiguous_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
@@ -351,21 +348,21 @@ class MultiqcModule(BaseMultiqcModule):
                                      'description': 'Percent of original reads removed by consensus',
                                      'suffix': '%',
                                      'format': '{:,.1f}'}
-        keys['umi_baseline_mapped'] = {'title': "Original mapped",
+        keys['umi_baseline_all'] = {'title': 'Orig. total',
+                                    'description': 'Total reads in the original BAM',
+                                    'format': '{:n}'}
+        keys['umi_baseline_mapped'] = {'title': "Orig. mapped",
                                        'description': 'Count of original mapped reads',
                                        'format': '{:n}'}
-        keys['umi_baseline_duplicate_pct'] = {'title': 'Original duplicates',
+        keys['umi_baseline_duplicate_pct'] = {'title': 'Orig. dup',
                                               'description': 'Percentage original duplicates',
                                               'suffix': '%',
                                               'format': '{:,.1f}'}
-        keys['umi_baseline_all'] = {'title': 'Original total',
-                                    'description': 'Total reads in the original BAM',
-                                    'format': '{:n}'}
-        keys['umi_reduction_median'] = {'title': 'Duplicate reduction (median)',
+        keys['umi_reduction_median'] = {'title': 'Dup. reduction (median)',
                                         'description': 'Reduction in duplicates per position by UMIs (median)',
                                         'suffix': 'x',
                                         'format': '{:n}'}
-        keys['umi_reduction_max'] = {'title': 'Duplicate reduction (max)',
+        keys['umi_reduction_max'] = {'title': 'Dup. reduction (max)',
                                      'description': 'Reduction in duplicates per position by UMIs (maximum)',
                                      'suffix': 'x',
                                      'format': '{:n}'}
