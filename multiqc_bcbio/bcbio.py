@@ -33,6 +33,11 @@ INTRO_VARIANT = """
                     %of GC content (x-axis).</p>
                 """
 
+read_format = '{:,.1f}&nbsp;' + config.read_count_prefix
+if config.read_count_multiplier == 1:
+    read_format = '{:,.0f}'
+
+
 class MultiqcModule(BaseMultiqcModule):
 
     def __init__(self):
@@ -150,10 +155,6 @@ class MultiqcModule(BaseMultiqcModule):
         else:
             headers.update(srna.add_srna_headers(self.bcbio_data))
 
-        read_format = '{:,.1f}&nbsp;' + config.read_count_prefix
-        if config.read_count_multiplier == 1:
-            read_format = '{:,.0f}'
-            
         if any(['Total_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Total_reads'] = {
                 'title': 'Reads',
@@ -341,31 +342,55 @@ class MultiqcModule(BaseMultiqcModule):
 
     def _bcbio_umi_table(self, parsed_data):
         keys = OrderedDict()
-        keys['umi_consensus_mapped'] = {'title': 'Consensus mapped',
-                                        'description': 'Count of UMI consensus reads mapped',
-                                        'format': '{:n}'}
-        keys['umi_consensus_pct'] = {'title': 'Consensus reduction',
-                                     'description': 'Percent of original reads removed by consensus',
-                                     'suffix': '%',
-                                     'format': '{:,.1f}'}
-        keys['umi_baseline_all'] = {'title': 'Orig. total',
-                                    'description': 'Total reads in the original BAM',
-                                    'format': '{:n}'}
-        keys['umi_baseline_mapped'] = {'title': "Orig. mapped",
-                                       'description': 'Count of original mapped reads',
-                                       'format': '{:n}'}
-        keys['umi_baseline_duplicate_pct'] = {'title': 'Orig. dup',
-                                              'description': 'Percentage original duplicates',
-                                              'suffix': '%',
-                                              'format': '{:,.1f}'}
-        keys['umi_reduction_median'] = {'title': 'Dup. reduction (median)',
-                                        'description': 'Reduction in duplicates per position by UMIs (median)',
-                                        'suffix': 'x',
-                                        'format': '{:n}'}
-        keys['umi_reduction_max'] = {'title': 'Dup. reduction (max)',
-                                     'description': 'Reduction in duplicates per position by UMIs (maximum)',
-                                     'suffix': 'x',
-                                     'format': '{:n}'}
+        keys['umi_consensus_mapped'] = {
+            'title': 'Consensus mapped',
+            'description': 'Count of UMI consensus reads mapped',
+            'modify': lambda x: x * config.read_count_multiplier,
+            'shared_key': 'read_count',
+            'format': read_format,
+        }
+        keys['umi_consensus_pct'] = {
+            'title': 'Consensus reduction',
+            'description': 'Percent of original reads removed by consensus',
+            'min': 0,
+            'max': 100,
+            'suffix': '%',
+            'format': '{:,.1f}',
+        }
+        keys['umi_baseline_all'] = {
+            'title': 'Orig. total',
+            'description': 'Total reads in the original BAM',
+            'modify': lambda x: x * config.read_count_multiplier,
+            'shared_key': 'read_count',
+            'format': read_format,
+        }
+        keys['umi_baseline_mapped'] = {
+            'title': "Orig. mapped",
+            'description': 'Count of original mapped reads',
+            'modify': lambda x: x * config.read_count_multiplier,
+            'shared_key': 'read_count',
+            'format': read_format,
+        }
+        keys['umi_baseline_duplicate_pct'] = {
+            'title': 'Orig. dup',
+            'description': 'Percentage original duplicates',
+            'min': 0,
+            'max': 100,
+            'suffix': '%',
+            'format': '{:,.1f}',
+        }
+        keys['umi_reduction_median'] = {
+            'title': 'Dup. reduction (median)',
+            'description': 'Reduction in duplicates per position by UMIs (median)',
+            'suffix': 'x',
+            'format': '{:n}'
+        }
+        keys['umi_reduction_max'] = {
+            'title': 'Dup. reduction (max)',
+            'description': 'Reduction in duplicates per position by UMIs (maximum)',
+            'suffix': 'x',
+            'format': '{:n}'
+        }
         return {'name': 'UMI barcode statistics',
                 'anchor': 'umi-stats',
                 'plot': table.plot(parsed_data, keys)}
@@ -386,8 +411,10 @@ class MultiqcModule(BaseMultiqcModule):
                 if counts:
                     data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts[:to_show]])}
         keys = OrderedDict()
-        keys["counts"] = {"title": "Virus (count)",
-                          "description": "Top %s viral sequences, with counts, found in unmapped reads" % to_show}
+        keys["counts"] = {
+            "title": "Virus (count)",
+            "description": "Top %s viral sequences, with counts, found in unmapped reads" % to_show
+        }
         if data:
             return {"name": "Viral mapping read counts",
                     "anchor": "viral-counts",
@@ -406,7 +433,10 @@ class MultiqcModule(BaseMultiqcModule):
         if data:
             cols = OrderedDict()
             for k in sorted(list(keys), reverse=True):
-                cols[k] = {"title": k, "format": "{:n}"}
+                cols[k] = {
+                    "title": k,
+                    "format": "{:n}"
+                }
             return {"name": "DNA damage and bias filtering",
                     "anchor": "damage-stats",
                     "plot": table.plot(data, cols)}
