@@ -478,8 +478,9 @@ def _get_disambiguited(dt):
                                    'assigned to the different species involved. This metric shows the number '
                                    'of removed reads.',
                     'min': 0,
-                    'format': '{:.0f}',
+                    'modify': lambda x: x * config.read_count_multiplier,
                     'shared_key': 'read_count',
+                    'format': read_format,
                     'scale': 'RdYlGn',
                 }
     return h
