@@ -234,12 +234,11 @@ class MultiqcModule(BaseMultiqcModule):
 
         if any(['rRNA_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['rRNA_rate'] = {
-                'title': 'rRNA pct',
+                'title': 'rRNA',
                 'description': '% alignments to rRNA. Depending on the library preparation methods used, the proportion '
                                'of rRNA sequences should be quite low. If large proportions of rRNA sequences are seen, '
                                'it is wise to consider if the depth of the remaining sequences is sufficient for further analyses.',
-                'max': 100,
-                'min': 0,
+                'min': 0, 'max': 100, 'suffix': '%',
                 'modify': lambda x: x * 100,
                 'scale': 'RdYlGn',
                 'format': '{:,.1f}'
