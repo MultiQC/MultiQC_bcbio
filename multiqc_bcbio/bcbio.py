@@ -472,8 +472,8 @@ def _get_disambiguited(dt):
         for k in dt[s]:
             if k.startswith("Disambiguated"):
                 h[k] = {
-                    'title': k.replace("_", " ").replace("Disambiguated", "Disamb."),
-                    'description': 'When samples are at risk of cross-species contamination (e.g. those '
+                    'title': k.replace("Disambiguated_", "").replace("_reads", "").replace("ambiguous", "Ambig.").replace("_", " "),
+                    'description': 'Disambuguation. When samples are at risk of cross-species contamination (e.g. those '
                                    'derived from PDXs), an attempt is performed to remove reads that are '
                                    'assigned to the different species involved. This metric shows the number '
                                    'of removed reads.',
