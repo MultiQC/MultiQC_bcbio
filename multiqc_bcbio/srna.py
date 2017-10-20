@@ -33,6 +33,8 @@ class parse(BaseMultiqcModule):
             with open(os.path.join(f['root'], f['fn'])) as in_handle:
                 for line in in_handle:
                     cols = line.strip().split()
+                    if len(cols) == 0:
+                        continue
                     if cols[0] == "mirs":
                         data[s_name]["miRNAs"] = int(cols[1])
                     if cols[0] == "isomirs":
