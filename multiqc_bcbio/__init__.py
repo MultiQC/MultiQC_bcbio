@@ -51,14 +51,3 @@ def multiqc_bcbio_config():
             'Number_of_variants_before_filter': False,
         },
     })
-    config.module_order = [
-        "bcbio",
-        "samtools",
-        "goleft_indexcov",
-        "bcftools",
-        "picard",
-        "qualimap",
-        "snpeff",
-        "fastqc",
-        "preseq"
-    ]
