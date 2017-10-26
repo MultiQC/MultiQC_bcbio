@@ -19,13 +19,9 @@ from multiqc_bcbio import srna
 # Initialise the logger
 log = logging.getLogger('multiqc.multiqc_bcbio')
 
-INTRO_COVERAGE = """
-                    <p>This section shows the percentage of regions with a certain
-                    level of nucleotides covered by a given number of reads:</p>
-                 """
 INTRO_COVERAGE_AVG = """
-                    <p>This section shows the percentage of nucleotides (y-axis)
-                    covered by a given number of reads (x-axis).</p>
+                    <p>This section shows the percentage of genome or target nucleotides (y-axis)
+                    covered by at least of a given number of reads (x-axis).</p>
                  """
 INTRO_VARIANT = """
                     <p>This section shows the percentage of variatns (y-axes) that a)
@@ -85,8 +81,9 @@ class MultiqcModule(BaseMultiqcModule):
         # Coverage plot
         # Only one section, so add to the intro
 
-        coverage_plot = self.bcbio_coverage_chart('bcbio/coverage')
-        coverage_avg_plot = self.bcbio_coverage_avg_chart('bcbio/coverage_avg')
+        coverage_avg_plot = self.bcbio_coverage_avg_chart('bcbio/coverage_dist')
+        if not coverage_avg_plot:
+            coverage_avg_plot = self.bcbio_coverage_avg_chart_deprecated_in_1_0_6('bcbio/coverage_avg')
         qsignature_plot = None # disable plotting for now
         #qsignature_plot = self.bcbio_qsignature_chart('bcbio/qsignature')
         for umi_section in self.bcbio_umi_stats("bcbio/umi"):
@@ -116,12 +113,6 @@ class MultiqcModule(BaseMultiqcModule):
                 anchor='bcbio-fraction-coverage-all',
                 description=INTRO_COVERAGE_AVG,
                 plot=coverage_avg_plot)
-        if coverage_plot:
-            self.add_section(
-                name='Coverage Profile Along Regions',
-                anchor='bcbio-fraction-coverage',
-                description=INTRO_COVERAGE,
-                plot=coverage_plot)
         if qsignature_plot:
             self.add_section(
                 name='qSignature Profile',
@@ -297,6 +288,36 @@ class MultiqcModule(BaseMultiqcModule):
         for f in self.find_log_files(names):
             s_name = self.clean_s_name(f['fn'], root=None)
             for line in f['f'].split("\n"):
+                if not line.startswith("total"):
+                    continue
+                _, cutoff_reads, bases_fraction = line.split("\t")
+                y = 100.0 * float(bases_fraction)
+                x = int(cutoff_reads)
+                data[s_name][x] = y
+                if y > 1.0:
+                    x_threshold = max(x_threshold, x)
+
+            if s_name in data:
+                self.add_data_source(f)
+
+        if data:
+            return linegraph.plot(data, {
+                'xlab': 'Coverage (X)',
+                "ylab": '% bases in genome or rarget covered by least X reads',
+                'ymax': 100,
+                "xmax": x_threshold,
+            })
+
+    def bcbio_coverage_avg_chart_deprecated_in_1_0_6(self, names):
+        """ Make the bcbio assignment rates plot
+            (from the old-style file before mosdepth integration,
+            deprectated since bcbio 1.0.6 """
+
+        x_threshold = 0
+        data = defaultdict(dict)
+        for f in self.find_log_files(names):
+            s_name = self.clean_s_name(f['fn'].replace(), root=None)
+            for line in f['f'].split("\n"):
                 if not line.startswith("percentage"):
                     continue
                 cutoff_reads, bases_pct, sample = line.split("\t")
@@ -311,8 +332,9 @@ class MultiqcModule(BaseMultiqcModule):
 
         if data:
             return linegraph.plot(data, {
-                "xlab": "number of reads",
-                "ylab": '% bases in the regions covered',
+                'xlab': 'Coverage (X)',
+                "ylab": '% bases in genome or rarget covered by least X reads',
+                'ymax': 100,
                 "xmax": x_threshold,
             })
 
