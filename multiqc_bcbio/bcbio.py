@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """ MultiQC module to parse output from bcbio"""
 
@@ -18,19 +19,20 @@ from multiqc_bcbio import srna
 # Initialise the logger
 log = logging.getLogger('multiqc.multiqc_bcbio')
 
-INTRO_COVERAGE = """
-                    <p>This section shows the percentage of regions with a certain
-                    level of nucleotides covered by a given number of reads:</p>
-                 """
 INTRO_COVERAGE_AVG = """
-                    <p>This section shows the percentage of nucleotides (y-axis)
-                    covered by a given number of reads (x-axis).</p>
+                    <p>This section shows the percentage of genome or target nucleotides (y-axis)
+                    covered by at least of a given number of reads (x-axis).</p>
                  """
 INTRO_VARIANT = """
                     <p>This section shows the percentage of variatns (y-axes) that a)
                     are covered by a givin number of reads or more (x-axis), or b)
                     %of GC content (x-axis).</p>
                 """
+
+read_format = '{:,.1f}&nbsp;' + config.read_count_prefix
+if config.read_count_multiplier == 1:
+    read_format = '{:,.0f}'
+
 
 class MultiqcModule(BaseMultiqcModule):
 
@@ -79,8 +81,9 @@ class MultiqcModule(BaseMultiqcModule):
         # Coverage plot
         # Only one section, so add to the intro
 
-        coverage_plot = self.bcbio_coverage_chart('bcbio/coverage')
-        coverage_avg_plot = self.bcbio_coverage_avg_chart('bcbio/coverage_avg')
+        coverage_avg_plot = self.bcbio_coverage_avg_chart('bcbio/coverage_dist')
+        if not coverage_avg_plot:
+            coverage_avg_plot = self.bcbio_coverage_avg_chart_deprecated_in_1_0_6('bcbio/coverage_avg')
         qsignature_plot = None # disable plotting for now
         #qsignature_plot = self.bcbio_qsignature_chart('bcbio/qsignature')
         for umi_section in self.bcbio_umi_stats("bcbio/umi"):
@@ -110,12 +113,6 @@ class MultiqcModule(BaseMultiqcModule):
                 anchor='bcbio-fraction-coverage-all',
                 description=INTRO_COVERAGE_AVG,
                 plot=coverage_avg_plot)
-        if coverage_plot:
-            self.add_section(
-                name='Coverage Profile Along Regions',
-                anchor='bcbio-fraction-coverage',
-                description=INTRO_COVERAGE,
-                plot=coverage_plot)
         if qsignature_plot:
             self.add_section(
                 name='qSignature Profile',
@@ -148,16 +145,11 @@ class MultiqcModule(BaseMultiqcModule):
             log.error("Cannot import MultiQC_bcbio sRNA.")
         else:
             headers.update(srna.add_srna_headers(self.bcbio_data))
-        
-        read_format = '{:,.2f} ' + config.read_count_prefix
-        if config.read_count_multiplier == 1:
-            read_format = '{:,.0f}'
-            
+
         if any(['Total_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Total_reads'] = {
                 'title': 'Reads',
-                'description': 'Total raw sequences' +
-                               (' ({})'.format(config.read_count_desc) if config.read_count_desc else ''),
+                'description': 'Total read count in the output BAM file (including unmapped, etc.)',
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
@@ -166,8 +158,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['Mapped_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads'] = {
                 'title': 'Aln',
-                'description': 'Total number of read alignments' +
-                               (' ({})'.format(config.read_count_desc) if config.read_count_desc else ''),
+                'description': 'Total number of read alignments',
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
@@ -176,7 +167,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Mapped_reads_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads_pct'] = {
-                'title': '% Map',
+                'title': 'Aln',
                 'description': '% Mapped reads',
                 'min': 0,
                 'max': 100,
@@ -186,7 +177,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Duplicates_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Duplicates_pct'] = {
-                'title': '% Dup',
+                'title': 'Dup',
                 'description': '% Duplicated reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -194,7 +185,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Ontarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Ontarget_pct'] = {
-                'title': '% On-trg',
+                'title': 'On-trg',
                 'description': '% On-target (both mates, primary) mapped not-duplicate reads',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -202,7 +193,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Ontarget_padded_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Ontarget_padded_pct'] = {
-                'title': '% On-trg+200bp',
+                'title': '±200bp',
                 'description': '% Reads that overlap target regions extended by 200 bp. Expected to be 1-2% higher.',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -211,7 +202,7 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Usable_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Usable_pct'] = {
-                'title': '% Usable',
+                'title': 'Usable',
                 'description': '% Unique reads mapped on target in the total number of original reads.',
                 'min': 0, 'max': 100, 'suffix': '%',
                 'scale': 'RdYlGn',
@@ -219,15 +210,14 @@ class MultiqcModule(BaseMultiqcModule):
             }
         if any(['Avg_coverage' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Avg_coverage'] = {
-                'title': 'Depth',
+                'title': 'Cov',
                 'description': 'Average target read coverage',
-                'format': '{:,.2f}',
+                'format': '{:,.1f}',
             }
         if any(['Average_insert_size' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Average_insert_size'] = {
-                'title': 'Insert Size',
-                'description': 'Average insert size',
-                'suffix': 'bp',
+                'title': 'Mean IS',
+                'description': 'Mean insert size (samtools stats)',
                 'format': '{:.0f}',
             }
         if any(['Disambiguated_ambiguous_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
@@ -235,12 +225,11 @@ class MultiqcModule(BaseMultiqcModule):
 
         if any(['rRNA_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['rRNA_rate'] = {
-                'title': 'rRNA pct',
+                'title': 'rRNA',
                 'description': '% alignments to rRNA. Depending on the library preparation methods used, the proportion '
                                'of rRNA sequences should be quite low. If large proportions of rRNA sequences are seen, '
                                'it is wise to consider if the depth of the remaining sequences is sufficient for further analyses.',
-                'max': 100,
-                'min': 0,
+                'min': 0, 'max': 100, 'suffix': '%',
                 'modify': lambda x: x * 100,
                 'scale': 'RdYlGn',
                 'format': '{:,.1f}'
@@ -299,6 +288,36 @@ class MultiqcModule(BaseMultiqcModule):
         for f in self.find_log_files(names):
             s_name = self.clean_s_name(f['fn'], root=None)
             for line in f['f'].split("\n"):
+                if not line.startswith("total"):
+                    continue
+                _, cutoff_reads, bases_fraction = line.split("\t")
+                y = 100.0 * float(bases_fraction)
+                x = int(cutoff_reads)
+                data[s_name][x] = y
+                if y > 1.0:
+                    x_threshold = max(x_threshold, x)
+
+            if s_name in data:
+                self.add_data_source(f)
+
+        if data:
+            return linegraph.plot(data, {
+                'xlab': 'Coverage (X)',
+                "ylab": '% bases in genome or rarget covered by least X reads',
+                'ymax': 100,
+                "xmax": x_threshold,
+            })
+
+    def bcbio_coverage_avg_chart_deprecated_in_1_0_6(self, names):
+        """ Make the bcbio assignment rates plot
+            (from the old-style file before mosdepth integration,
+            deprectated since bcbio 1.0.6 """
+
+        x_threshold = 0
+        data = defaultdict(dict)
+        for f in self.find_log_files(names):
+            s_name = self.clean_s_name(f['fn'], root=None)
+            for line in f['f'].split("\n"):
                 if not line.startswith("percentage"):
                     continue
                 cutoff_reads, bases_pct, sample = line.split("\t")
@@ -313,8 +332,9 @@ class MultiqcModule(BaseMultiqcModule):
 
         if data:
             return linegraph.plot(data, {
-                "xlab": "number of reads",
-                "ylab": '% bases in the regions covered',
+                'xlab': 'Coverage (X)',
+                "ylab": '% bases in genome or rarget covered by least X reads',
+                'ymax': 100,
                 "xmax": x_threshold,
             })
 
@@ -343,31 +363,55 @@ class MultiqcModule(BaseMultiqcModule):
 
     def _bcbio_umi_table(self, parsed_data):
         keys = OrderedDict()
-        keys['umi_consensus_mapped'] = {'title': 'Consensus mapped',
-                                        'description': 'Count of UMI consensus reads mapped',
-                                        'format': '{:n}'}
-        keys['umi_consensus_pct'] = {'title': 'Consensus reduction',
-                                     'description': 'Percent of original reads removed by consensus',
-                                     'suffix': '%',
-                                     'format': '{:,.1f}'}
-        keys['umi_baseline_mapped'] = {'title': "Original mapped",
-                                       'description': 'Count of original mapped reads',
-                                       'format': '{:n}'}
-        keys['umi_baseline_duplicate_pct'] = {'title': 'Original duplicates',
-                                              'description': 'Percentage original duplicates',
-                                              'suffix': '%',
-                                              'format': '{:,.1f}'}
-        keys['umi_baseline_all'] = {'title': 'Original total',
-                                    'description': 'Total reads in the original BAM',
-                                    'format': '{:n}'}
-        keys['umi_reduction_median'] = {'title': 'Duplicate reduction (median)',
-                                        'description': 'Reduction in duplicates per position by UMIs (median)',
-                                        'suffix': 'x',
-                                        'format': '{:n}'}
-        keys['umi_reduction_max'] = {'title': 'Duplicate reduction (max)',
-                                     'description': 'Reduction in duplicates per position by UMIs (maximum)',
-                                     'suffix': 'x',
-                                     'format': '{:n}'}
+        keys['umi_consensus_mapped'] = {
+            'title': 'Consensus mapped',
+            'description': 'Count of UMI consensus reads mapped',
+            'modify': lambda x: x * config.read_count_multiplier,
+            'shared_key': 'read_count',
+            'format': read_format,
+        }
+        keys['umi_consensus_pct'] = {
+            'title': 'Consensus reduction',
+            'description': 'Percent of original reads removed by consensus',
+            'min': 0,
+            'max': 100,
+            'suffix': '%',
+            'format': '{:,.1f}',
+        }
+        keys['umi_baseline_all'] = {
+            'title': 'Orig. total',
+            'description': 'Total reads in the original BAM',
+            'modify': lambda x: x * config.read_count_multiplier,
+            'shared_key': 'read_count',
+            'format': read_format,
+        }
+        keys['umi_baseline_mapped'] = {
+            'title': "Orig. mapped",
+            'description': 'Count of original mapped reads',
+            'modify': lambda x: x * config.read_count_multiplier,
+            'shared_key': 'read_count',
+            'format': read_format,
+        }
+        keys['umi_baseline_duplicate_pct'] = {
+            'title': 'Orig. dup',
+            'description': 'Percentage original duplicates',
+            'min': 0,
+            'max': 100,
+            'suffix': '%',
+            'format': '{:,.1f}',
+        }
+        keys['umi_reduction_median'] = {
+            'title': 'Dup. reduction (median)',
+            'description': 'Reduction in duplicates per position by UMIs (median)',
+            'suffix': 'x',
+            'format': '{:n}'
+        }
+        keys['umi_reduction_max'] = {
+            'title': 'Dup. reduction (max)',
+            'description': 'Reduction in duplicates per position by UMIs (maximum)',
+            'suffix': 'x',
+            'format': '{:n}'
+        }
         return {'name': 'UMI barcode statistics',
                 'anchor': 'umi-stats',
                 'plot': table.plot(parsed_data, keys)}
@@ -388,8 +432,10 @@ class MultiqcModule(BaseMultiqcModule):
                 if counts:
                     data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts[:to_show]])}
         keys = OrderedDict()
-        keys["counts"] = {"title": "Virus (count)",
-                          "description": "Top %s viral sequences, with counts, found in unmapped reads" % to_show}
+        keys["counts"] = {
+            "title": "Virus (count)",
+            "description": "Top %s viral sequences, with counts, found in unmapped reads" % to_show
+        }
         if data:
             return {"name": "Viral mapping read counts",
                     "anchor": "viral-counts",
@@ -408,7 +454,10 @@ class MultiqcModule(BaseMultiqcModule):
         if data:
             cols = OrderedDict()
             for k in sorted(list(keys), reverse=True):
-                cols[k] = {"title": k, "format": "{:n}"}
+                cols[k] = {
+                    "title": k,
+                    "format": "{:n}"
+                }
             return {"name": "DNA damage and bias filtering",
                     "anchor": "damage-stats",
                     "plot": table.plot(data, cols)}
@@ -444,14 +493,15 @@ def _get_disambiguited(dt):
         for k in dt[s]:
             if k.startswith("Disambiguated"):
                 h[k] = {
-                    'title': k.replace("_", " ").replace("Disambiguated", "Disamb."),
-                    'description': 'When samples are at risk of cross-species contamination (e.g. those '
+                    'title': k.replace("Disambiguated_", "").replace("_reads", "").replace("ambiguous", "Ambig.").replace("_", " "),
+                    'description': 'Disambuguation. When samples are at risk of cross-species contamination (e.g. those '
                                    'derived from PDXs), an attempt is performed to remove reads that are '
                                    'assigned to the different species involved. This metric shows the number '
                                    'of removed reads.',
                     'min': 0,
-                    'format': '{:.0f}',
+                    'modify': lambda x: x * config.read_count_multiplier,
                     'shared_key': 'read_count',
+                    'format': read_format,
                     'scale': 'RdYlGn',
                 }
     return h

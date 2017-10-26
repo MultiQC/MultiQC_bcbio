@@ -9,12 +9,12 @@ For more information about MultiQC, see http://multiqc.info
 
 from setuptools import setup, find_packages
 
-version = '0.2.2'
+version = '0.2.3'
 
 setup(
     name = 'multiqc_bcbio',
     version = version,
-    author = 'Lorena Pantano, Brad Chapman , Vlad Saveliev, Phil Ewels',
+    author = 'Lorena Pantano, Brad Chapman, Vlad Saveliev, Phil Ewels',
     author_email = 'lpantano@iscb.org',
     description = "MultiQC plugin for bcbio_nextgen pipeline",
     long_description = __doc__,
