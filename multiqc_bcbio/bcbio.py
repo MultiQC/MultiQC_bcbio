@@ -316,7 +316,7 @@ class MultiqcModule(BaseMultiqcModule):
         x_threshold = 0
         data = defaultdict(dict)
         for f in self.find_log_files(names):
-            s_name = self.clean_s_name(f['fn'].replace(), root=None)
+            s_name = self.clean_s_name(f['fn'], root=None)
             for line in f['f'].split("\n"):
                 if not line.startswith("percentage"):
                     continue
