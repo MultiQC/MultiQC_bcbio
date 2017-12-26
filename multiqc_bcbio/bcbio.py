@@ -29,11 +29,6 @@ INTRO_VARIANT = """
                     %of GC content (x-axis).</p>
                 """
 
-read_format = '{:,.1f}&nbsp;' + config.read_count_prefix
-if config.read_count_multiplier == 1:
-    read_format = '{:,.0f}'
-
-
 class MultiqcModule(BaseMultiqcModule):
 
     def __init__(self):
@@ -60,6 +55,10 @@ class MultiqcModule(BaseMultiqcModule):
         if len(self.bcbio_data) == 0:
             log.debug("Could not find any reports in {}".format(config.analysis_dir))
             raise UserWarning
+
+        self.read_format = '{:,.1f}&nbsp;' + config.read_count_prefix
+        if config.read_count_multiplier == 1:
+            self.read_format = '{:,.0f}'
 
         log.info("Found {} reports".format(len(self.bcbio_data)))
 
@@ -153,7 +152,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
-                'format': read_format,
+                'format': self.read_format,
             }
         if any(['Mapped_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Mapped_reads'] = {
@@ -162,7 +161,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'min': 0,
                 'modify': lambda x: x * config.read_count_multiplier,
                 'shared_key': 'read_count',
-                'format': read_format,
+                'format': self.read_format,
                 'hidden': True,
             }
         if any(['Mapped_reads_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
@@ -221,7 +220,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'format': '{:.0f}',
             }
         if any(['Disambiguated_ambiguous_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
-            headers.update(_get_disambiguited(self.bcbio_data))
+            headers.update(_get_disambiguited(self.bcbio_data, self.read_format))
 
         if any(['rRNA_rate' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['rRNA_rate'] = {
@@ -368,7 +367,7 @@ class MultiqcModule(BaseMultiqcModule):
             'description': 'Count of UMI consensus reads mapped',
             'modify': lambda x: x * config.read_count_multiplier,
             'shared_key': 'read_count',
-            'format': read_format,
+            'format': self.read_format,
         }
         keys['umi_consensus_pct'] = {
             'title': 'Consensus reduction',
@@ -383,14 +382,14 @@ class MultiqcModule(BaseMultiqcModule):
             'description': 'Total reads in the original BAM',
             'modify': lambda x: x * config.read_count_multiplier,
             'shared_key': 'read_count',
-            'format': read_format,
+            'format': self.read_format,
         }
         keys['umi_baseline_mapped'] = {
             'title': "Orig. mapped",
             'description': 'Count of original mapped reads',
             'modify': lambda x: x * config.read_count_multiplier,
             'shared_key': 'read_count',
-            'format': read_format,
+            'format': self.read_format,
         }
         keys['umi_baseline_duplicate_pct'] = {
             'title': 'Orig. dup',
@@ -486,7 +485,7 @@ class MultiqcModule(BaseMultiqcModule):
         return heatmap.plot(hmdata, names)
 
 
-def _get_disambiguited(dt):
+def _get_disambiguited(dt, read_format):
     """Get headers for disamb."""
     h = OrderedDict()
     for s in dt:
