@@ -11,6 +11,7 @@ import re
 from collections import defaultdict
 import yaml
 
+
 from multiqc import config
 from multiqc.modules.base_module import BaseMultiqcModule
 from multiqc.plots import linegraph, table, heatmap
@@ -43,6 +44,7 @@ class MultiqcModule(BaseMultiqcModule):
 
         # Find and load any bcbio reports
         self.bcbio_data = dict()
+        self.mosdepth_data = dict()
         for f in self.find_log_files('bcbio/metrics'):
             parsed_data = self.parse_bcbio_report(f['f'])
             if parsed_data is not None:
@@ -106,12 +108,18 @@ class MultiqcModule(BaseMultiqcModule):
                 name='Isomirs stats',
                 anchor='bcbio-isomirs',
                 plot=mirna_stats.iso)
-        if coverage_avg_plot:
+        if "coverage_avg_chart" in coverage_avg_plot:
             self.add_section(
                 name='Coverage Profile',
                 anchor='bcbio-fraction-coverage-all',
                 description=INTRO_COVERAGE_AVG,
-                plot=coverage_avg_plot)
+                plot=coverage_avg_plot["coverage_avg_chart"])
+        if "coverage_avg_per_contig_plot" in coverage_avg_plot:
+            self.add_section(
+                name='Average Coverage',
+                anchor='bcbio-average-coverage-per-contig',
+                description=INTRO_COVERAGE_AVG,
+                plot=coverage_avg_plot["coverage_avg_per_contig_plot"])
         if qsignature_plot:
             self.add_section(
                 name='qSignature Profile',
@@ -284,12 +292,16 @@ class MultiqcModule(BaseMultiqcModule):
 
         x_threshold = 0
         data = defaultdict(dict)
+        avgdata = defaultdict(dict)
         for f in self.find_log_files(names):
             s_name = self.clean_s_name(f['fn'], root=None)
             for line in f['f'].split("\n"):
-                if not line.startswith("total"):
+                if "\t" not in line:
                     continue
-                _, cutoff_reads, bases_fraction = line.split("\t")
+                contig, cutoff_reads, bases_fraction = line.split("\t")
+                if not contig == "total":
+                    avg = avgdata[s_name].get(contig, 0) + float(bases_fraction)
+                    avgdata[s_name][contig] = avg
                 y = 100.0 * float(bases_fraction)
                 x = int(cutoff_reads)
                 data[s_name][x] = y
@@ -299,13 +311,22 @@ class MultiqcModule(BaseMultiqcModule):
             if s_name in data:
                 self.add_data_source(f)
 
+        plots = {}
         if data:
-            return linegraph.plot(data, {
+            plots["coverage_avg_chart"] = linegraph.plot(data, {
+                'id': "coverage_avg_chart",
                 'xlab': 'Coverage (X)',
                 "ylab": '% bases in genome or rarget covered by least X reads',
                 'ymax': 100,
                 "xmax": x_threshold,
             })
+            plots["coverage_avg_per_contig_plot"] = linegraph.plot(avgdata, {
+                'id': "coverage_avg_per_contig_plot",
+                'xlab': 'region',
+                'ylab': 'average coverage',
+                'categories': True
+            })
+        return plots
 
     def bcbio_coverage_avg_chart_deprecated_in_1_0_6(self, names):
         """ Make the bcbio assignment rates plot
