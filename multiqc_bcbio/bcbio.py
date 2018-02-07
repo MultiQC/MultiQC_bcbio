@@ -419,7 +419,7 @@ class MultiqcModule(BaseMultiqcModule):
     def get_viral_stats(self, fnames):
         """Provide counts of top viral hits for samples.
         """
-        to_show = 5
+        min_count_to_show = 10
         data = {}
         for f in self.find_log_files(fnames):
             with open(os.path.join(f['root'], f['fn'])) as in_handle:
@@ -427,18 +427,21 @@ class MultiqcModule(BaseMultiqcModule):
                 counts = []
                 for line in in_handle:
                     contig, count = line.strip().split("\t")
-                    counts.append((int(count), contig))
+                    count = int(count)
+                    if count >= min_count_to_show:
+                        counts.append((int(count), contig))
                 counts.sort(reverse=True)
                 if counts:
-                    data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts[:to_show]])}
+                    data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts])}
         keys = OrderedDict()
         keys["counts"] = {
             "title": "Virus (count)",
-            "description": "Top %s viral sequences, with counts, found in unmapped reads" % to_show
+            "description": "Top viral sequences, with read counts above %s, found in unmapped reads." % min_count_to_show
         }
         if data:
-            return {"name": "Viral mapping read counts",
+            return {"name": "Viral read counts",
                     "anchor": "viral-counts",
+                    "description": "Top viral sequences, with read counts above %s, found in unmapped reads." % min_count_to_show,
                     "plot": table.plot(data, keys)}
 
     def get_damage_stats(self, fnames):
