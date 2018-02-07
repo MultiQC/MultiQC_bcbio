@@ -427,7 +427,7 @@ class MultiqcModule(BaseMultiqcModule):
                 counts = []
                 for line in in_handle:
                     contig, count = line.strip().split("\t")
-                    counts.append((count, contig))
+                    counts.append((int(count), contig))
                 counts.sort(reverse=True)
                 if counts:
                     data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts[:to_show]])}
