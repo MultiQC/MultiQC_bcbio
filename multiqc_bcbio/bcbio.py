@@ -108,13 +108,13 @@ class MultiqcModule(BaseMultiqcModule):
                 name='Isomirs stats',
                 anchor='bcbio-isomirs',
                 plot=mirna_stats.iso)
-        if "coverage_avg_chart" in coverage_avg_plot:
+        if coverage_avg_plot and "coverage_avg_chart" in coverage_avg_plot:
             self.add_section(
                 name='Coverage Profile',
                 anchor='bcbio-fraction-coverage-all',
                 description=INTRO_COVERAGE_AVG,
                 plot=coverage_avg_plot["coverage_avg_chart"])
-        if "coverage_avg_per_contig_plot" in coverage_avg_plot:
+        if coverage_avg_plot and "coverage_avg_per_contig_plot" in coverage_avg_plot:
             self.add_section(
                 name='Average Coverage',
                 anchor='bcbio-average-coverage-per-contig',
