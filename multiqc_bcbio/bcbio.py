@@ -291,8 +291,8 @@ class MultiqcModule(BaseMultiqcModule):
         """ Make the bcbio assignment rates plot """
 
         x_threshold = 0
-        data = defaultdict(dict)
-        avgdata = defaultdict(dict)
+        data = defaultdict(OrderedDict)
+        avgdata = defaultdict(OrderedDict)
         for f in self.find_log_files(names):
             s_name = self.clean_s_name(f['fn'], root=None)
             for line in f['f'].split("\n"):
