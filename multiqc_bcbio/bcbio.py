@@ -54,10 +54,6 @@ class MultiqcModule(BaseMultiqcModule):
                 self.add_data_source(f)
                 self.bcbio_data[s_name] = parsed_data
 
-        if len(self.bcbio_data) == 0:
-            log.debug("Could not find any reports in {}".format(config.analysis_dir))
-            raise UserWarning
-
         self.read_format = '{:,.1f}&nbsp;' + config.read_count_prefix
         if config.read_count_multiplier == 1:
             self.read_format = '{:,.0f}'
@@ -91,6 +87,8 @@ class MultiqcModule(BaseMultiqcModule):
             self.add_section(**umi_section)
 
         viral_stats = self.get_viral_stats("bcbio/viral")
+        if not viral_stats:
+            viral_stats = self.get_viral_stats_old("bcbio/viral_old")
         if viral_stats:
             self.add_section(**viral_stats)
 
@@ -436,8 +434,8 @@ class MultiqcModule(BaseMultiqcModule):
                 'anchor': 'umi-stats',
                 'plot': table.plot(parsed_data, keys)}
 
-    def get_viral_stats(self, fnames):
-        """Provide counts of top viral hits for samples.
+    def get_viral_stats_old(self, fnames):
+        """ DEPRECATED since bcbio-v1.1.0
         """
         min_count_to_show = 10
         data = {}
@@ -462,6 +460,45 @@ class MultiqcModule(BaseMultiqcModule):
             return {"name": "Viral read counts",
                     "anchor": "viral-counts",
                     "description": "Top viral sequences, with read counts above %s, found in unmapped reads." % min_count_to_show,
+                    "plot": table.plot(data, keys)}
+
+    def get_viral_stats(self, fnames):
+        """ Provide top viral hits for samples.
+        """
+        min_completeness_to_show = 0.5
+        completeness_threshold = '5x'
+        data = {}
+        for f in self.find_log_files(fnames):
+            with open(os.path.join(f['root'], f['fn'])) as in_handle:
+                _ = in_handle.readline()
+                sample_name = in_handle.readline().strip().split()[-1]
+                headers = in_handle.readline().strip().split("\t")  # #virus  size    depth   1x      5x      25x
+                viral_data = []
+                for line in in_handle:
+                    values_dict = dict(zip(headers, line.strip().split("\t")))
+                    virus_name = values_dict['#virus']
+                    ave_depth = float(values_dict['depth'])
+                    completeness = float(values_dict[completeness_threshold])
+                    if completeness >= min_completeness_to_show:
+                        viral_data.append((completeness, ave_depth, virus_name))
+                viral_data.sort(reverse=True)
+                if viral_data:
+                    data[sample_name] = {
+                        "viral_content": ", ".join(["<b>{}</b> (mean depth: {:.1f}x; at >{}: {}%)".format(
+                            v, d, completeness_threshold, int(100 * c))
+                            for (c, d, v) in viral_data])}
+        keys = OrderedDict()
+        keys["viral_content"] = {
+            "title": "Viral content",
+            "description": 'Virus (% of sequence covered > {}).'.format(completeness_threshold),
+        }
+        if data:
+            return {"name": "Viral content",
+                    "anchor": "viral-content",
+                    "description": (
+                        'Viral sequences from <a href="https://gdc.cancer.gov/about-data/data-harmonization-and-generation/gdc-reference-files">GDC</a> ' +
+                        'found in unmapped reads, with at least {} support along at least {}% of the genome.'.format(
+                            completeness_threshold, int(100 * min_completeness_to_show))),
                     "plot": table.plot(data, keys)}
 
     def get_damage_stats(self, fnames):

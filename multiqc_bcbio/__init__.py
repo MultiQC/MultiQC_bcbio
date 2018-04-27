@@ -17,7 +17,8 @@ def multiqc_bcbio_config():
         'bcbio/vcfstats': {'fn': '*_bcbio_variants_stats.txt'},
         'bcbio/seqbuster': {'contents': 'seqbuster'},
         'bcbio/umi': {'fn': '*_umi_stats.yaml'},
-        'bcbio/viral': {'fn': '*viral*-counts.txt'},
+        'bcbio/viral_old': {'fn': '*viral*-counts.txt'},
+        'bcbio/viral': {'fn': '*viral*-completeness.txt'},
         'bcbio/damage': {'fn': '*damage.yaml'},
     }
     config.update_dict(config.sp, bcbio_search_patterns)
