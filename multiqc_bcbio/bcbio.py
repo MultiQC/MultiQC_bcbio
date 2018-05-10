@@ -150,7 +150,6 @@ class MultiqcModule(BaseMultiqcModule):
             log.error("Cannot import MultiQC_bcbio sRNA.")
         else:
             headers.update(srna.add_srna_headers(self.bcbio_data))
-
         if any(['Total_reads' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Total_reads'] = {
                 'title': 'Reads',
@@ -179,6 +178,16 @@ class MultiqcModule(BaseMultiqcModule):
                 'suffix': '%',
                 'scale': 'RdYlGn',
                 'format': '{:,.1f}',
+            }
+        if any(['RiP_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['RiP_pct'] = {
+                'title': 'RiP',
+                'description': '% Rads in peaks',
+                'min': 0,
+                'max': 100,
+                'suffix': '%',
+                'scale': 'RdYlGn',
+                'format': '{:,.3f}',
             }
         if any(['Duplicates_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['Duplicates_pct'] = {

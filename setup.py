@@ -9,7 +9,7 @@ For more information about MultiQC, see http://multiqc.info
 
 from setuptools import setup, find_packages
 
-version = '0.2.5'
+version = '0.2.6'
 
 setup(
     name = 'multiqc_bcbio',
@@ -19,8 +19,8 @@ setup(
     description = "MultiQC plugin for bcbio_nextgen pipeline",
     long_description = __doc__,
     keywords = 'bioinformatics',
-    url = 'https://github.com/lpantano/MultiQC_bcbio',
-    download_url = 'https://github.com/lpantano/MultiQC_bcbio/releases',
+    url = 'https://github.com/MultiQC/MultiQC_bcbio',
+    download_url = 'https://github.com/MultiQC/MultiQC_bcbio/releases',
     license = 'MIT',
     packages = find_packages(),
     include_package_data = True,
