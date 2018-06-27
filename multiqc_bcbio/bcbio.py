@@ -474,7 +474,7 @@ class MultiqcModule(BaseMultiqcModule):
     def get_viral_stats(self, fnames):
         """ Provide top viral hits for samples.
         """
-        min_completeness_to_show = 0.5
+        min_significant_completeness = 0.5
         completeness_threshold = '5x'
         data = {}
         for f in self.find_log_files(fnames):
@@ -488,27 +488,33 @@ class MultiqcModule(BaseMultiqcModule):
                     virus_name = values_dict['#virus']
                     ave_depth = float(values_dict['depth'])
                     completeness = float(values_dict[completeness_threshold])
-                    if completeness >= min_completeness_to_show:
-                        viral_data.append((completeness, ave_depth, virus_name))
+                    viral_data.append((completeness, ave_depth, virus_name))
                 viral_data.sort(reverse=True)
-                if viral_data:
-                    data[sample_name] = {
-                        "viral_content": ", ".join(["<b>{}</b> (mean depth: {:.1f}x; at >{}: {}%)".format(
-                            v, d, completeness_threshold, int(100 * c))
-                            for (c, d, v) in viral_data])}
+                there_some_hits = any(c >= min_significant_completeness for c, d, v in viral_data)
+                if not there_some_hits:
+                    # showing all that significant, but at least 3 records even if nothing is significant
+                    viral_data = viral_data[:3]
+                else:
+                    viral_data = [(c, d, v) for c, d, v in viral_data if c >= min_significant_completeness]
+                line = "; ".join([
+                       (("<b>{}</b> " if c >= min_significant_completeness else "{}") + " [{:.1f}x; {}% at >{}]"
+                        ).format(v, d, int(100 * c), completeness_threshold)
+                        for i, (c, d, v) in enumerate(viral_data)])
+                if not there_some_hits:
+                    line = "No significant hits ({}; ...)".format(line)
+                data[sample_name] = {"viral_content": line}
         keys = OrderedDict()
         keys["viral_content"] = {
             "title": "Viral content",
-            "description": 'Virus (% of sequence covered > {}).'.format(completeness_threshold),
+            "description": 'Virus (x depth; % of sequence covered at >{}).'.format(completeness_threshold),
         }
-        if data:
-            return {"name": "Viral content",
-                    "anchor": "viral-content",
-                    "description": (
-                        'Viral sequences from <a href="https://gdc.cancer.gov/about-data/data-harmonization-and-generation/gdc-reference-files">GDC</a> ' +
-                        'found in unmapped reads, with at least {} support along at least {}% of the genome.'.format(
-                            completeness_threshold, int(100 * min_completeness_to_show))),
-                    "plot": table.plot(data, keys)}
+        return {"name": "Viral content",
+                "anchor": "viral-content",
+                "description": (
+                    'Viral sequences from <a href="https://gdc.cancer.gov/about-data/data-harmonization-and-generation/gdc-reference-files">GDC</a> found in unmapped reads. '
+                    'Showing significant hits with at least {} support along at least {}% of the genome.'
+                    ).format(completeness_threshold, int(100 * min_significant_completeness)),
+                "plot": table.plot(data, keys)}
 
     def get_damage_stats(self, fnames):
         """Summarize statistics on samples with DNA damage.
