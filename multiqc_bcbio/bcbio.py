@@ -508,13 +508,14 @@ class MultiqcModule(BaseMultiqcModule):
             "title": "Viral content",
             "description": 'Virus (x depth; % of sequence covered at >{}).'.format(completeness_threshold),
         }
-        return {"name": "Viral content",
-                "anchor": "viral-content",
-                "description": (
-                    'Viral sequences from <a href="https://gdc.cancer.gov/about-data/data-harmonization-and-generation/gdc-reference-files">GDC</a> found in unmapped reads. '
-                    'Showing significant hits with at least {} support along at least {}% of the genome.'
-                    ).format(completeness_threshold, int(100 * min_significant_completeness)),
-                "plot": table.plot(data, keys)}
+        if data:
+            return {"name": "Viral content",
+                    "anchor": "viral-content",
+                    "description": (
+                        'Viral sequences from <a href="https://gdc.cancer.gov/about-data/data-harmonization-and-generation/gdc-reference-files">GDC</a> found in unmapped reads. '
+                        'Showing significant hits with at least {} support along at least {}% of the genome.'
+                        ).format(completeness_threshold, int(100 * min_significant_completeness)),
+                    "plot": table.plot(data, keys)}
 
     def get_damage_stats(self, fnames):
         """Summarize statistics on samples with DNA damage.
