@@ -62,7 +62,8 @@ class MultiqcModule(BaseMultiqcModule):
 
         # detect mirna
         mirna_stats = srna.parse()
-        self.bcbio_data.update(mirna_stats.general)
+        for s in mirna_stats.general:
+            self.bcbio_data[s].update(mirna_stats.general[s])
         # Write parsed report data to a file
         self.write_data_file(self.bcbio_data, 'multiqc_bcbio_metrics')
 
