@@ -13,7 +13,7 @@ def multiqc_bcbio_config():
         'bcbio/coverage_avg': {'fn': '*_bcbio_coverage_avg.txt'},  # deprecated in 1.0.6, replaced with 'bcbio/coverage_dist'
         'bcbio/variants': {'fn': '*_bcbio_variants.txt'},
         'bcbio/target': {'fn': 'target_info.yaml'},
-        'bcbio/qsignature': {'fn': '*bcbio_qsignature.ma'},
+        'bcbio/qsignature': {'fn': '*qsignature.ma'},
         'bcbio/vcfstats': {'fn': '*_bcbio_variants_stats.txt'},
         'bcbio/seqbuster': {'contents': 'seqbuster'},
         'bcbio/umi': {'fn': '*_umi_stats.yaml'},
