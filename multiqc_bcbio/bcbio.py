@@ -529,11 +529,11 @@ class MultiqcModule(BaseMultiqcModule):
                 there_some_hits = any(c >= min_significant_completeness for c, d, v in viral_data)
                 if not there_some_hits:
                     # showing all that significant, but at least 3 records even if nothing is significant
-                    viral_data = viral_data[:3]
+                    viral_data = viral_data[:2]
                 else:
                     viral_data = [(c, d, v) for c, d, v in viral_data if c >= min_significant_completeness]
                 line = "; ".join([
-                       (("<b>{}</b> " if c >= min_significant_completeness else "{}") + " [{:.1f}x; {}% at >{}]"
+                       (("<b>{}</b> " if c >= min_significant_completeness else "{}") + " {:.1f}x: {}% at >{}"
                         ).format(v, d, int(100 * c), completeness_threshold)
                         for i, (c, d, v) in enumerate(viral_data)])
                 if not there_some_hits:
