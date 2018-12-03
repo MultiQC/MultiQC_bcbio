@@ -83,7 +83,7 @@ class MultiqcModule(BaseMultiqcModule):
         if not coverage_avg_plot:
             coverage_avg_plot = self.bcbio_coverage_avg_chart_deprecated_in_1_0_6('bcbio/coverage_avg')
         qsignature_plot = None # disable plotting for now
-        #qsignature_plot = self.bcbio_qsignature_chart('bcbio/qsignature')
+        qsignature_plot = self.bcbio_qsignature_chart('bcbio/qsignature')
         for umi_section in self.bcbio_umi_stats("bcbio/umi"):
             self.add_section(**umi_section)
 
@@ -539,28 +539,29 @@ class MultiqcModule(BaseMultiqcModule):
                     "anchor": "damage-stats",
                     "plot": table.plot(data, cols)}
 
-    def bcbio_qsignature_chart(self, names) :
+    def bcbio_qsignature_chart(self, fnames):
         """ Make the bcbio assignment rates plot """
 
         hmdata = list()
         data = defaultdict(dict)
-        for f in self.find_log_files(names):
+        for f in self.find_log_files(fnames):
             s_name = self.clean_s_name(f['fn'], root=None)
-            for l in f['f'].splitlines():
-                cols = l.strip().split()
-                data[cols[0]][cols[1]] = float(cols[2])
-                data[cols[1]][cols[0]] = float(cols[2])
-                data[cols[0]][cols[0]] = 0
-                data[cols[1]][cols[1]] = 0
+            with open(os.path.join(f['root'], f['fn'])) as in_handle:
+                for l in in_handle:
+                    cols = l.strip().split()
+                    data[cols[0]][cols[1]] = float(cols[2])
+                    data[cols[1]][cols[0]] = float(cols[2])
+                    data[cols[0]][cols[0]] = 0
+                    data[cols[1]][cols[1]] = 0
 
-        names = data.keys()
-        for name in names:
-            row = list()
-            for name2 in names:
-                row.append(data[name][name2])
-            hmdata.append(row)
-
-        return heatmap.plot(hmdata, names)
+        if data:
+            names = list(data.keys())
+            for name in names:
+                row = list()
+                for name2 in names:
+                    row.append(data[name][name2])
+                hmdata.append(row)
+            return heatmap.plot(hmdata, names)
 
 
 def _get_disambiguited(dt, read_format):
