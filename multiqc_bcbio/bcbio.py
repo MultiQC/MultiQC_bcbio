@@ -633,8 +633,6 @@ def add_project_info(data):
         else:
             if coverage_bed_info:
                 config.report_header_info.append({"Target for coverage:": _format_bed_info(coverage_bed_info, genome_info)})
-            if variants_regions_info and variants_regions_info['bed']:
-                config.report_header_info.append({"Target for var. calling:": _format_bed_info(variants_regions_info, genome_info)})
 
 
 def _format_bed_info(d, genome_info):
@@ -643,7 +641,7 @@ def _format_bed_info(d, genome_info):
                                 _format_decimal(d.get('regions')),\
                                 _format_decimal(d.get('genes'))
     bed_name = os.path.basename(bed)
-    html = '<a href={bed}>{bed_name}</a>'
+    html = '{bed_name}'
     if size is not None:
         percent = (100.0 * d['size'] / genome_info['size']) if genome_info.get('size') else 0
         html += ' ({size} bp'
