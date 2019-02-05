@@ -67,7 +67,12 @@ class MultiqcModule(BaseMultiqcModule):
         # Write parsed report data to a file
         self.write_data_file(self.bcbio_data, 'multiqc_bcbio_metrics')
 
-        # Basic Stats Table
+        # Viral stats table and column in generalstats
+        viral_stats = self.get_viral_stats("bcbio/viral")
+        if viral_stats:
+            self.add_section(**viral_stats)
+
+        # Basic stats columns in generalstats
         # Report table is immutable, so just updating it works
         self.metrics_stats_table()
 
@@ -78,7 +83,6 @@ class MultiqcModule(BaseMultiqcModule):
 
         # Coverage plot
         # Only one section, so add to the intro
-
         coverage_avg_plot = self.bcbio_coverage_avg_chart('bcbio/coverage_dist')
         if not coverage_avg_plot:
             coverage_avg_plot = self.bcbio_coverage_avg_chart_deprecated_in_1_0_6('bcbio/coverage_avg')
@@ -86,12 +90,6 @@ class MultiqcModule(BaseMultiqcModule):
         qsignature_plot = self.bcbio_qsignature_chart('bcbio/qsignature')
         for umi_section in self.bcbio_umi_stats("bcbio/umi"):
             self.add_section(**umi_section)
-
-        viral_stats = self.get_viral_stats("bcbio/viral")
-        if not viral_stats:
-            viral_stats = self.get_viral_stats_old("bcbio/viral_old")
-        if viral_stats:
-            self.add_section(**viral_stats)
 
         damage_stats = self.get_damage_stats("bcbio/damage")
         if damage_stats:
@@ -479,40 +477,13 @@ class MultiqcModule(BaseMultiqcModule):
                 'anchor': 'umi-stats',
                 'plot': table.plot(parsed_data, keys)}
 
-    def get_viral_stats_old(self, fnames):
-        """ DEPRECATED since bcbio-v1.1.0
-        """
-        min_count_to_show = 10
-        data = {}
-        for f in self.find_log_files(fnames):
-            with open(os.path.join(f['root'], f['fn'])) as in_handle:
-                sample_name = in_handle.readline().strip().split()[-1]
-                counts = []
-                for line in in_handle:
-                    contig, count = line.strip().split("\t")
-                    count = int(count)
-                    if count >= min_count_to_show:
-                        counts.append((int(count), contig))
-                counts.sort(reverse=True)
-                if counts:
-                    data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts])}
-        keys = OrderedDict()
-        keys["counts"] = {
-            "title": "Virus (count)",
-            "description": "Top viral sequences, with read counts above %s, found in unmapped reads." % min_count_to_show
-        }
-        if data:
-            return {"name": "Viral read counts",
-                    "anchor": "viral-counts",
-                    "description": "Top viral sequences, with read counts above %s, found in unmapped reads." % min_count_to_show,
-                    "plot": table.plot(data, keys)}
-
     def get_viral_stats(self, fnames):
         """ Provide top viral hits for samples.
         """
         min_significant_completeness = 0.5
         completeness_threshold = '5x'
-        data = {}
+        table_data = {}
+        generalstats_data = {}
         for f in self.find_log_files(fnames):
             with open(os.path.join(f['root'], f['fn'])) as in_handle:
                 _ = in_handle.readline()
@@ -538,20 +509,40 @@ class MultiqcModule(BaseMultiqcModule):
                         for i, (c, d, v) in enumerate(viral_data)])
                 if not there_some_hits:
                     line = "No significant hits ({}; ...)".format(line)
-                data[sample_name] = {"viral_content": line}
-        keys = OrderedDict()
-        keys["viral_content"] = {
-            "title": "Viral content",
-            "description": 'Virus (x depth; % of sequence covered at >{}).'.format(completeness_threshold),
-        }
-        if data:
-            return {"name": "Viral content",
-                    "anchor": "viral-content",
-                    "description": (
-                        'Viral sequences from <a href="https://gdc.cancer.gov/about-data/data-harmonization-and-generation/gdc-reference-files">GDC</a> found in unmapped reads. '
-                        'Showing significant hits with at least {} support along at least {}% of the genome.'
-                        ).format(completeness_threshold, int(100 * min_significant_completeness)),
-                    "plot": table.plot(data, keys)}
+                table_data[sample_name] = {"viral_content": line}
+
+                # General stats:
+                generalstats_data[sample_name] = {
+                    "viral_content": "; ".join([v for i, (c, d, v) in enumerate(viral_data)]) if there_some_hits else '-'
+                }
+
+        if generalstats_data:
+            self.general_stats_addcols(
+                data=generalstats_data,
+                headers={
+                    'viral_content': {
+                        'title': 'Viral',
+                        'description': 'Sequences of known oncoviruses, found in umapped reads',
+                    }
+                }
+            )
+        if table_data:
+            keys = {
+                "viral_content": {
+                    "title": "Viral content",
+                    "description": 'Virus (x depth; % of sequence covered at >{}).'.format(completeness_threshold),
+                }
+            }
+            description = (
+                'Viral sequences from <a href="https://gdc.cancer.gov/about-data/data-harmonization-and-generation/gdc-reference-files">GDC</a> found in unmapped reads. '
+                'Showing significant hits with at least {} support along at least {}% of the genome.'
+            ).format(completeness_threshold, int(100 * min_significant_completeness))
+            return {
+                "name": "Viral content",
+                "anchor": "viral-content",
+                "description": description,
+                "plot": table.plot(table_data, keys)
+            }
 
     def get_damage_stats(self, fnames):
         """Summarize statistics on samples with DNA damage.
