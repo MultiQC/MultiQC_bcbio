@@ -198,7 +198,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'title': 'Dup',
                 'description': '% Duplicated reads',
                 'min': 0, 'max': 100, 'suffix': '%',
-                'scale': 'RdYlGn',
+                'scale': 'OrRd',
                 'format': '{:,.1f}'
             }
         if any(['Ontarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
