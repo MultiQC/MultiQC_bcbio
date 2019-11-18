@@ -183,7 +183,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['RiP_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['RiP_pct'] = {
                 'title': 'RiP',
-                'description': '% Rads in peaks',
+                'description': '% Reads in peaks',
                 'min': 0,
                 'max': 100,
                 'suffix': '%',
@@ -248,7 +248,26 @@ class MultiqcModule(BaseMultiqcModule):
                 'modify': lambda x: x * 100,
                 'scale': 'RdYlGn',
                 'format': '{:,.1f}'
-            }
+                }
+        log.info(self.bcbio_data)
+        if any(['PBC1' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['PBC1'] = {
+                'title': 'PBC1',
+                'description': 'PCR Bottlenecking coefficient 1',
+                'scale': 'RdYlGn',
+                'format': '{:,.1f'}
+        if any(['PBC2' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['PBC2'] = {
+                'title': 'PBC2',
+                'description': 'PCR Bottlenecking coefficient 2',
+                'scale': 'RdYlGn',
+                'format': '{:,.1f'}
+        if any(['NRF' in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['NRF'] = {
+                'title': 'NRF',
+                'description': 'Non-redundant fraction',
+                'scale': 'RdYlGn',
+                'format': '{:,.1f'}
         if len(headers.keys()):
             self.general_stats_addcols(self.bcbio_data, headers)
 
