@@ -183,7 +183,7 @@ class MultiqcModule(BaseMultiqcModule):
         if any(['RiP_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['RiP_pct'] = {
                 'title': 'RiP',
-                'description': '% Rads in peaks',
+                'description': '% Reads in peaks',
                 'min': 0,
                 'max': 100,
                 'suffix': '%',
