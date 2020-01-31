@@ -127,15 +127,20 @@ class MultiqcModule(BaseMultiqcModule):
 
     def parse_bcbio_report(self, raw_data):
         """ Parse the bcbio log file. """
+        fields_allowed_strings = ["complexity", "bottlenecking"]
         parsed_data = {}
         for line in raw_data.split("\n"):
             fields = line.split("\t")
             if len(line) == 0:
                 continue
-            try:
-                parsed_data[fields[0].strip()] = float(fields[1].strip())
-            except:
-                pass
+            # assume data is floats except for specific fields allowed to be strings
+            if fields[0].strip() in fields_allowed_strings:
+                parsed_data[fields[0].strip()] = fields[1].strip()
+            else:
+                try:
+                    parsed_data[fields[0].strip()] = float(fields[1].strip())
+                except:
+                    pass
         if len(parsed_data) == 0: return None
         return parsed_data
 
@@ -249,25 +254,36 @@ class MultiqcModule(BaseMultiqcModule):
                 'scale': 'RdYlGn',
                 'format': '{:,.1f}'
                 }
-        log.info(self.bcbio_data)
         if any(['PBC1' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['PBC1'] = {
                 'title': 'PBC1',
                 'description': 'PCR Bottlenecking coefficient 1',
                 'scale': 'RdYlGn',
-                'format': '{:,.1f'}
+                'format': '{:,.2f}'}
         if any(['PBC2' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['PBC2'] = {
                 'title': 'PBC2',
                 'description': 'PCR Bottlenecking coefficient 2',
                 'scale': 'RdYlGn',
-                'format': '{:,.1f'}
+                'format': '{:,.2f}'}
+        if any(["bottlenecking" in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['bottlenecking'] = {
+                'title': 'Bottlenecking level',
+                'description': 'ENCODE bottlenecking-level',
+                'scale': 'false',
+                'format': '{}'}
         if any(['NRF' in self.bcbio_data[s] for s in self.bcbio_data]):
             headers['NRF'] = {
                 'title': 'NRF',
                 'description': 'Non-redundant fraction',
                 'scale': 'RdYlGn',
-                'format': '{:,.1f'}
+                'format': '{:,.2f}'}
+        if any(["complexity" in self.bcbio_data[s] for s in self.bcbio_data]):
+            headers['complexity'] = {
+                'title': 'ENCODE Complexity',
+                'description': 'ENCODE complexity',
+                'scale': 'false',
+                'format': '{}'}
         if len(headers.keys()):
             self.general_stats_addcols(self.bcbio_data, headers)
 
