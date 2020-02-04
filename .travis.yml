@@ -14,5 +14,6 @@ install:
   - cd test_data
 # commands to run tests
 script:
+  - python -c 'import multiqc_bcbio.bcbio'
   - multiqc data/bcbio/*
   
