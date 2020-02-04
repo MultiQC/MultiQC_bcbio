@@ -1,11 +1,8 @@
 from __future__ import absolute_import
 
-from .bcbio import MultiqcModule
-from multiqc import config
-
-
 # Add search patterns and config options for the things that are used in MultiQC_bcbio
 def multiqc_bcbio_config():
+    from multiqc import config
     """ Set up MultiQC config defaults for this package """
     bcbio_search_patterns = {
         'bcbio/metrics': {'fn': '*_bcbio.txt'},
