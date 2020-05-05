@@ -488,32 +488,35 @@ class MultiqcModule(BaseMultiqcModule):
             with open(os.path.join(f['root'], f['fn'])) as in_handle:
                 _ = in_handle.readline()
                 sample_name = in_handle.readline().strip().split()[-1]
-                headers = in_handle.readline().strip().split("\t")  # #virus  size    depth   1x      5x      25x
+                headers = in_handle.readline().strip().split("\t")  # #virus size depth 1x 5x 25x reads reads_pct
                 viral_data = []
                 for line in in_handle:
                     values_dict = dict(zip(headers, line.strip().split("\t")))
                     virus_name = values_dict['#virus']
                     ave_depth = float(values_dict['depth'])
                     completeness = float(values_dict[completeness_threshold])
-                    viral_data.append((completeness, ave_depth, virus_name))
+                    reads = values_dict['reads']
+                    reads_pct = values_dict['reads_pct']
+                    viral_data.append((completeness, ave_depth, virus_name, reads, reads_pct))
                 viral_data.sort(reverse=True)
-                there_some_hits = any(c >= min_significant_completeness for c, d, v in viral_data)
+                there_some_hits = any(c >= min_significant_completeness for c, d, v, r, rp in viral_data)
                 if not there_some_hits:
                     # showing all that significant, but at least 3 records even if nothing is significant
                     viral_data = viral_data[:2]
                 else:
-                    viral_data = [(c, d, v) for c, d, v in viral_data if c >= min_significant_completeness]
+                    viral_data = [(c, d, v, r, rp) for c, d, v, r, rp in viral_data if c >= min_significant_completeness]
+                print('viral_data:', viral_data)
                 line = "; ".join([
-                       (("<b>{}</b> " if c >= min_significant_completeness else "{}") + ": {}% at >{}"
-                        ).format(v, int(100 * c), completeness_threshold)
-                        for i, (c, d, v) in enumerate(viral_data)])
+                       (("<b>{}</b> " if c >= min_significant_completeness else "{}") + ": {}% at >{}, {} ({}%) reads,"
+                        ).format(v, int(100 * c), completeness_threshold, r, rp)
+                        for i, (c, d, v, r, rp) in enumerate(viral_data)])
                 if not there_some_hits:
                     line = "No significant hits ({}; ...)".format(line)
                 table_data[sample_name] = {"viral_content": line}
 
                 # General stats:
                 generalstats_data[sample_name] = {
-                    "viral_content": "; ".join([v for i, (c, d, v) in enumerate(viral_data)]) if there_some_hits else '-'
+                    "viral_content": "; ".join([v for i, (c, d, v, r, rp) in enumerate(viral_data)]) if there_some_hits else '-'
                 }
 
         if generalstats_data:
