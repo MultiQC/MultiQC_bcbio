@@ -67,7 +67,12 @@ class MultiqcModule(BaseMultiqcModule):
         # Write parsed report data to a file
         self.write_data_file(self.bcbio_data, 'multiqc_bcbio_metrics')
 
-        # Basic Stats Table
+        # Viral stats table and column in generalstats
+        viral_stats = self.get_viral_stats("bcbio/viral")
+        if viral_stats:
+            self.add_section(**viral_stats)
+
+        # Basic stats columns in generalstats
         # Report table is immutable, so just updating it works
         self.metrics_stats_table()
 
@@ -78,7 +83,6 @@ class MultiqcModule(BaseMultiqcModule):
 
         # Coverage plot
         # Only one section, so add to the intro
-
         coverage_avg_plot = self.bcbio_coverage_avg_chart('bcbio/coverage_dist')
         if not coverage_avg_plot:
             coverage_avg_plot = self.bcbio_coverage_avg_chart_deprecated_in_1_0_6('bcbio/coverage_avg')
@@ -86,12 +90,6 @@ class MultiqcModule(BaseMultiqcModule):
         qsignature_plot = self.bcbio_qsignature_chart('bcbio/qsignature')
         for umi_section in self.bcbio_umi_stats("bcbio/umi"):
             self.add_section(**umi_section)
-
-        viral_stats = self.get_viral_stats("bcbio/viral")
-        if not viral_stats:
-            viral_stats = self.get_viral_stats_old("bcbio/viral_old")
-        if viral_stats:
-            self.add_section(**viral_stats)
 
         damage_stats = self.get_damage_stats("bcbio/damage")
         if damage_stats:
@@ -200,7 +198,7 @@ class MultiqcModule(BaseMultiqcModule):
                 'title': 'Dup',
                 'description': '% Duplicated reads',
                 'min': 0, 'max': 100, 'suffix': '%',
-                'scale': 'RdYlGn',
+                'scale': 'OrRd',
                 'format': '{:,.1f}'
             }
         if any(['Ontarget_pct' in self.bcbio_data[s] for s in self.bcbio_data]):
@@ -479,79 +477,75 @@ class MultiqcModule(BaseMultiqcModule):
                 'anchor': 'umi-stats',
                 'plot': table.plot(parsed_data, keys)}
 
-    def get_viral_stats_old(self, fnames):
-        """ DEPRECATED since bcbio-v1.1.0
-        """
-        min_count_to_show = 10
-        data = {}
-        for f in self.find_log_files(fnames):
-            with open(os.path.join(f['root'], f['fn'])) as in_handle:
-                sample_name = in_handle.readline().strip().split()[-1]
-                counts = []
-                for line in in_handle:
-                    contig, count = line.strip().split("\t")
-                    count = int(count)
-                    if count >= min_count_to_show:
-                        counts.append((int(count), contig))
-                counts.sort(reverse=True)
-                if counts:
-                    data[sample_name] = {"counts": ", ".join(["%s (%s)" % (v, c) for (c, v) in counts])}
-        keys = OrderedDict()
-        keys["counts"] = {
-            "title": "Virus (count)",
-            "description": "Top viral sequences, with read counts above %s, found in unmapped reads." % min_count_to_show
-        }
-        if data:
-            return {"name": "Viral read counts",
-                    "anchor": "viral-counts",
-                    "description": "Top viral sequences, with read counts above %s, found in unmapped reads." % min_count_to_show,
-                    "plot": table.plot(data, keys)}
-
     def get_viral_stats(self, fnames):
         """ Provide top viral hits for samples.
         """
         min_significant_completeness = 0.5
         completeness_threshold = '5x'
-        data = {}
+        table_data = {}
+        generalstats_data = {}
         for f in self.find_log_files(fnames):
             with open(os.path.join(f['root'], f['fn'])) as in_handle:
                 _ = in_handle.readline()
                 sample_name = in_handle.readline().strip().split()[-1]
-                headers = in_handle.readline().strip().split("\t")  # #virus  size    depth   1x      5x      25x
+                headers = in_handle.readline().strip().split("\t")  # #virus size depth 1x 5x 25x reads reads_pct
                 viral_data = []
                 for line in in_handle:
                     values_dict = dict(zip(headers, line.strip().split("\t")))
                     virus_name = values_dict['#virus']
                     ave_depth = float(values_dict['depth'])
                     completeness = float(values_dict[completeness_threshold])
-                    viral_data.append((completeness, ave_depth, virus_name))
+                    reads = values_dict['reads']
+                    reads_pct = values_dict['reads_pct']
+                    viral_data.append((completeness, ave_depth, virus_name, reads, reads_pct))
                 viral_data.sort(reverse=True)
-                there_some_hits = any(c >= min_significant_completeness for c, d, v in viral_data)
+                there_some_hits = any(c >= min_significant_completeness for c, d, v, r, rp in viral_data)
                 if not there_some_hits:
                     # showing all that significant, but at least 3 records even if nothing is significant
-                    viral_data = viral_data[:3]
+                    viral_data = viral_data[:2]
                 else:
-                    viral_data = [(c, d, v) for c, d, v in viral_data if c >= min_significant_completeness]
+                    viral_data = [(c, d, v, r, rp) for c, d, v, r, rp in viral_data if c >= min_significant_completeness]
+                print('viral_data:', viral_data)
                 line = "; ".join([
-                       (("<b>{}</b> " if c >= min_significant_completeness else "{}") + " [{:.1f}x; {}% at >{}]"
-                        ).format(v, d, int(100 * c), completeness_threshold)
-                        for i, (c, d, v) in enumerate(viral_data)])
+                       (("<b>{}</b> " if c >= min_significant_completeness else "{}") + ": {}% at >{}, {} ({}%) reads,"
+                        ).format(v, int(100 * c), completeness_threshold, r, rp)
+                        for i, (c, d, v, r, rp) in enumerate(viral_data)])
                 if not there_some_hits:
                     line = "No significant hits ({}; ...)".format(line)
-                data[sample_name] = {"viral_content": line}
-        keys = OrderedDict()
-        keys["viral_content"] = {
-            "title": "Viral content",
-            "description": 'Virus (x depth; % of sequence covered at >{}).'.format(completeness_threshold),
-        }
-        if data:
-            return {"name": "Viral content",
-                    "anchor": "viral-content",
-                    "description": (
-                        'Viral sequences from <a href="https://gdc.cancer.gov/about-data/data-harmonization-and-generation/gdc-reference-files">GDC</a> found in unmapped reads. '
-                        'Showing significant hits with at least {} support along at least {}% of the genome.'
-                        ).format(completeness_threshold, int(100 * min_significant_completeness)),
-                    "plot": table.plot(data, keys)}
+                table_data[sample_name] = {"viral_content": line}
+
+                # General stats:
+                generalstats_data[sample_name] = {
+                    "viral_content": "; ".join([v for i, (c, d, v, r, rp) in enumerate(viral_data)]) if there_some_hits else '-'
+                }
+
+        if generalstats_data:
+            self.general_stats_addcols(
+                data=generalstats_data,
+                headers={
+                    'viral_content': {
+                        'title': 'Viral',
+                        'description': 'Sequences of known oncoviruses, found in umapped reads',
+                    }
+                }
+            )
+        if table_data:
+            keys = {
+                "viral_content": {
+                    "title": "Viral content",
+                    "description": 'Virus (x depth; % of sequence covered at >{}).'.format(completeness_threshold),
+                }
+            }
+            description = (
+                'Viral sequences from <a href="https://gdc.cancer.gov/about-data/data-harmonization-and-generation/gdc-reference-files">GDC</a> found in unmapped reads. '
+                'Showing significant hits with at least {} support along at least {}% of the genome.'
+            ).format(completeness_threshold, int(100 * min_significant_completeness))
+            return {
+                "name": "Viral content",
+                "anchor": "viral-content",
+                "description": description,
+                "plot": table.plot(table_data, keys)
+            }
 
     def get_damage_stats(self, fnames):
         """Summarize statistics on samples with DNA damage.
@@ -633,8 +627,6 @@ def add_project_info(data):
         else:
             if coverage_bed_info:
                 config.report_header_info.append({"Target for coverage:": _format_bed_info(coverage_bed_info, genome_info)})
-            if variants_regions_info and variants_regions_info['bed']:
-                config.report_header_info.append({"Target for var. calling:": _format_bed_info(variants_regions_info, genome_info)})
 
 
 def _format_bed_info(d, genome_info):
@@ -643,7 +635,7 @@ def _format_bed_info(d, genome_info):
                                 _format_decimal(d.get('regions')),\
                                 _format_decimal(d.get('genes'))
     bed_name = os.path.basename(bed)
-    html = '<a href={bed}>{bed_name}</a>'
+    html = '{bed_name}'
     if size is not None:
         percent = (100.0 * d['size'] / genome_info['size']) if genome_info.get('size') else 0
         html += ' ({size} bp'
