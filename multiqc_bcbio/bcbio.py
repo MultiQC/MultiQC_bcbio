@@ -564,6 +564,7 @@ class MultiqcModule(BaseMultiqcModule):
                     "title": k,
                     "format": "{:n}"
                 }
+            self.write_data_file(data, 'multiqc_bcbio_damage_metrics')
             return {"name": "DNA damage and bias filtering",
                     "anchor": "damage-stats",
                     "plot": table.plot(data, cols)}
