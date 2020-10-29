@@ -3,10 +3,7 @@ python:
   - "3.8"
 # commands to install dependencies
 before_install:
-  - git clone https://github.com/ewels/MultiQC.git
-  - cd MultiQC
-  - python setup.py -q install
-  - cd ..
+  - pip install MultiQC
 install:
   - python setup.py -q install
   - git clone https://github.com/ewels/MultiQC_TestData.git test_data
